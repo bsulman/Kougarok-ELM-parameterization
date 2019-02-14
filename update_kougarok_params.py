@@ -15,7 +15,7 @@ ecotype_names={'NAMC':'Non-acidic mountain complex',
 
 
 def change_param(paramname,pftname,newval):
-    print('Changing parameter {paramname:s} for PFT {pftname:s} from {oldval:1.3g} to {newval:1.3g}'.format(
+    print('** Changing parameter {paramname:s} for PFT {pftname:s} from {oldval:1.3g} to {newval:1.3g}'.format(
         oldval=params[paramname][pft_names.index(pftname)].values,
         newval=newval,paramname=paramname,pftname=pftname))
     params[paramname][pft_names.index(pftname)] = newval
@@ -37,9 +37,22 @@ if __name__=='__main__':
 
     # For now: let's assume that relative amount of leaf biomass is proportional to relative amount of root biomass
     # But we may want to change to a different approach like PFT % coverage
-    leafCfrac=meas_leaf_C['NAMC']['dwarf shrub evergreen']/meas_leaf_C['NAMC'].sum()
-    change_param('froot_leaf','arctic_evergreen_shrub_dwarf',meas_root_C['NAMC']*leafCfrac/meas_leaf_C['NAMC']['dwarf shrub evergreen']) 
+    leafCfrac=meas_leaf_C/meas_leaf_C.groupby('Ecotype').sum()
 
+    def froot_leaf(ecotype,pft):
+        froot_leaf=meas_root_C[ecotype]*leafCfrac[ecotype][pft]/meas_leaf_C[ecotype][pft]
+        print('{ecotype:s}: {pft:s} leaf frac {leafCfrac:1.2f}, froot_leaf = {froot_leaf:1.2f}'.format(leafCfrac=leafCfrac[ecotype][pft],ecotype=ecotype,pft=pft,froot_leaf=froot_leaf))
+        return froot_leaf
+
+    # evergreen dwarf shrub
+    froot_leaf_TT=froot_leaf('TT','dwarf shrub evergreen')
+    froot_leaf_NAMC=froot_leaf('NAMC','dwarf shrub evergreen')
+    change_param('froot_leaf','arctic_evergreen_shrub_dwarf',froot_leaf_NAMC )
+
+    # Alder
+    froot_leaf_AS=froot_leaf('AS','tall shrub deciduous alder')
+    froot_leaf_TTWBT=froot_leaf('TTWBT','tall shrub deciduous alder')
+    change_param('froot_leaf','arctic_deciduous_shrub_alder',froot_leaf_AS)
 
 
 
