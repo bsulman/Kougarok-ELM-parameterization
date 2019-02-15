@@ -1,6 +1,6 @@
 import xarray
 
-params=xarray.open_dataset('/lustre/or-hydra/cades-ccsi/proj-shared/project_acme/cesminput_ngee/lnd/clm2/paramdata/clm_params_c180524-sub12.nc',autoclose=True,)
+params=xarray.open_dataset('clm_params_newpfts_c180524_orig.nc',autoclose=True,)
 
 pft_names=[name.strip() for name in params['pftname'].values.astype(str)]
 
@@ -31,7 +31,7 @@ if __name__=='__main__':
     Koug_meas_chem=pandas.read_excel('/home/b0u/Kougarok_param_edits/NGEEArctic_Q3ELM_KougarokSLA&Chemistry_20181112.xlsx',sheet_name='data')\
         .rename(columns={'ELM_PFT':'ELMgroup'}).set_index(['Ecotype','ELMgroup'])
 
-    surfdata=xarray.open_dataset('/lustre/or-hydra/cades-ccsi/proj-shared/project_acme/cesminput_ngee/lnd/clm2/surfdata_map/surfdata_51x63pt_kougarok-NGEE_TransA_simyr1850_c181115-sub12.nc')
+    surfdata=xarray.open_dataset('surfdata_51x63pt_kougarok-NGEE_TransA_simyr1850_c181115-sub12.nc')
     PFT_percents=pandas.DataFrame(data=surfdata.PCT_NAT_PFT.values.squeeze(),index=pft_names,columns=landscape_ecotypes)
 
     meas_leaf_C=(Koug_meas_biomass['LeafBiomass_gperm2']*Koug_meas_chem['LeafC_percent']/100)
