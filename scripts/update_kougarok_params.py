@@ -1,6 +1,7 @@
 import xarray
 
-params=xarray.open_dataset('clm_params_newpfts_c180524_orig.nc',autoclose=True,)
+basedir='/home/b0u/Kougarok_param_edits'
+params=xarray.open_dataset(basedir+'/param_files/clm_params_newpfts_c180524_orig.nc',autoclose=True,)
 
 pft_names=[name.strip() for name in params['pftname'].values.astype(str)]
 
@@ -26,12 +27,12 @@ def printnote(note):
 if __name__=='__main__':
     # Read in Verity Salmon's Kougarok measurements summary
     import pandas
-    Koug_meas_biomass=pandas.read_excel('/home/b0u/Kougarok_param_edits/NGEEArctic_Q3ELM_KougarokBiomass&NPP_20181112.xlsx',sheet_name='data')\
+    Koug_meas_biomass=pandas.read_excel(basedir+'/obs_data/NGEEArctic_Q3ELM_KougarokBiomass&NPP_20181112.xlsx',sheet_name='data')\
         .set_index(['Ecotype','ELMgroup'])
-    Koug_meas_chem=pandas.read_excel('/home/b0u/Kougarok_param_edits/NGEEArctic_Q3ELM_KougarokSLA&Chemistry_20181112.xlsx',sheet_name='data')\
+    Koug_meas_chem=pandas.read_excel(basedir+'/obs_data/NGEEArctic_Q3ELM_KougarokSLA&Chemistry_20181112.xlsx',sheet_name='data')\
         .rename(columns={'ELM_PFT':'ELMgroup'}).set_index(['Ecotype','ELMgroup'])
 
-    surfdata=xarray.open_dataset('surfdata_51x63pt_kougarok-NGEE_TransA_simyr1850_c181115-sub12.nc')
+    surfdata=xarray.open_dataset(basedir+'/param_files/surfdata_51x63pt_kougarok-NGEE_TransA_simyr1850_c181115-sub12.nc')
     PFT_percents=pandas.DataFrame(data=surfdata.PCT_NAT_PFT.values.squeeze(),index=pft_names,columns=landscape_ecotypes)
 
     meas_leaf_C=(Koug_meas_biomass['LeafBiomass_gperm2']*Koug_meas_chem['LeafC_percent']/100)
