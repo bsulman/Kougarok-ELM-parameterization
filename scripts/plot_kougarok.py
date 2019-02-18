@@ -136,16 +136,16 @@ obsdata_PFT_mappings={'dwarf shrub deciduous':'arctic_deciduous_shrub_dwarf',
 
 
 
-def plot_var_PFTs(varname,moddata,obsdata=None,minyear=0,maxyear=150,longname=None,units=None,modfactor=1.0,cumulative=False,weight_area=True,plotsum=False):
+def plot_var_PFTs(varname,moddata,ecotype_num,ax=None,obsdata=None,minyear=0,maxyear=150,longname=None,units=None,modfactor=1.0,cumulative=False,weight_area=True,plotsum=False):
     if isinstance(varname,str):
-        dat=moddata[varname+'_unweighted']
+        dat=moddata[varname+'_unweighted'].copy()
         if longname is None:
             longname=dat.long_name
         if units is None:
             units=dat.units
     else:
         # Assuming we are adding multiple data fields together
-        dat=moddata[varname[0]+'_unweighted']
+        dat=moddata[varname[0]+'_unweighted'].copy()
         if len(varname)>1:
             if longname is None:
                 raise ValueError('Must supply longname if passing multiple data fields')
@@ -181,36 +181,32 @@ def plot_var_PFTs(varname,moddata,obsdata=None,minyear=0,maxyear=150,longname=No
             dat=dat-dat.sel(time=mindate)
 
 
-    subplot_handles=[]
-    for ecotype_num in range(len(landscape_ecotypes)):
-        ax=subplot(2,3,ecotype_num+1)
-        subplot_handles.append(ax)
+    if ax is None:
+        ax=gca()
 
-        title(ecotype_names[landscape_ecotypes[ecotype_num]])
-        for pft in moddata.PFT.values:
-            pftlabel=pft_names[pft]
-            if pftlabel.startswith('arctic_'):
-                pftlabel=pftlabel[len('arctic_'):]
-            plot(t,dat.sel(ecotype=ecotype_num,PFT=pft)*modfactor,c=pft_colors[pft],label=pftlabel)
-        if plotsum:
-            plot(t,dat.sel(ecotype=ecotype_num).sum(dim='PFT')*modfactor,c='C0',label='Sum of PFTs')
-        xlabel('Time')
-        ylabel('%s (%s)'%(longname,units))
-        ax.set_xlim(left=mindate,right=maxdate)
-        xticks(rotation=80)
+    dat=dat*modfactor
+    ax.set_title(longname)
+    for pft in moddata.PFT.values:
+        pftlabel=pft_names[pft]
+        if pftlabel.startswith('arctic_'):
+            pftlabel=pftlabel[len('arctic_'):]
+        ax.plot(t,dat.sel(ecotype=ecotype_num,PFT=pft),c=pft_colors[pft],label=pftlabel)
+    if plotsum:
+        ax.plot(t,dat.sel(ecotype=ecotype_num).sum(dim='PFT'),c='C0',label='Sum of PFTs')
+    ax.set_xlabel('Time')
+    ax.set_ylabel('%s (%s)'%(longname,units))
+    ax.set_xlim(left=mindate,right=maxdate)
+    ax.set_xticklabels(ax.get_xticks(),rotation=0) 
 
-        if obsdata is not None:
-            # Collection was in 2016-2017, but model only goes through 2010. No big deal I guess.
-            for pft in obsdata[landscape_ecotypes[ecotype_num]].index:
-                plot([mindate,maxdate],[obsdata[(landscape_ecotypes[ecotype_num],pft)],obsdata[(landscape_ecotypes[ecotype_num],pft)]],c=pft_colors[(pft_names.index(obsdata_PFT_mappings[pft]))],ls='--')
-
-
-    legend(fontsize='small',loc=(1.02,0.0))
+    if obsdata is not None:
+        # Collection was in 2016-2017, but model only goes through 2010. No big deal I guess.
+        for pft in obsdata[landscape_ecotypes[ecotype_num]].index:
+            ax.plot([mindate,maxdate],[obsdata[(landscape_ecotypes[ecotype_num],pft)],obsdata[(landscape_ecotypes[ecotype_num],pft)]],c=pft_colors[(pft_names.index(obsdata_PFT_mappings[pft]))],ls='--')
 
 
-    tight_layout()
-    subplots_adjust(wspace=0.5)
-    return subplot_handles
+
+
+    return dat 
 
 
 def save_all_figs(dirname='Figures',format='png',**kwargs):
@@ -285,87 +281,68 @@ if __name__=='__main__':
     meas_leaf_C=(Koug_meas_biomass['LeafBiomass_gperm2']*Koug_meas_chem['LeafC_percent']/100).copy()
     meas_nonvasc_C=(Koug_meas_biomass['NonvascularBiomass_gperm2']*0.5)
     # Should this include nonvascular biomass?
-
-
-    figure('Leaf biomass (old params)',figsize=(10.2,6.5));clf()
     for ecotype in landscape_ecotypes:
         meas_leaf_C[ecotype,'moss']=meas_nonvasc_C.loc[ecotype,'moss']
         meas_leaf_C[ecotype,'lichen']=meas_nonvasc_C.loc[ecotype,'lichen']
-    sp_h=plot_var_PFTs('LEAFC',vegdata_PFTs_oldparams,meas_leaf_C)
     
-    figure('Leaf biomass (new params)',figsize=(10.2,6.5));clf()
-    for ecotype in landscape_ecotypes:
-        meas_leaf_C[ecotype,'moss']=meas_nonvasc_C.loc[ecotype,'moss']
-        meas_leaf_C[ecotype,'lichen']=meas_nonvasc_C.loc[ecotype,'lichen']
-    sp_h=plot_var_PFTs('LEAFC',vegdata_PFTs_newparams,meas_leaf_C)
-
-
-    figure('Fine root biomass (old params)',figsize=(10.2,6.5));clf()
     meas_root_C=Koug_meas_biomass['FineRootBiomass_gperm2'][:,'mixed']*(Koug_meas_chem['FineRootC_percent']/100)
-    plot_var_PFTs('FROOTC',vegdata_PFTs_oldparams,meas_root_C,plotsum=True)
-    # Should rhizomes be treated as fine or coarse roots?
-    figure('Fine root biomass (new params)',figsize=(10.2,6.5));clf()
-    plot_var_PFTs('FROOTC',vegdata_PFTs_newparams,meas_root_C,plotsum=True)
-
-    figure('Stem biomass (old params)',figsize=(10.2,6.5));clf()
     meas_stem_C=(Koug_meas_biomass['StemBiomass_gperm2']*Koug_meas_chem['StemC_percent']/100)
-    # Check this. WOODC appears to be sum of LIVESTEMC+DEADSTEMC+LIVECROOTC+DEADCROOTC
-    plot_var_PFTs(['LIVESTEMC','DEADSTEMC'],vegdata_PFTs_oldparams,meas_stem_C,longname='Stem C')
-    figure('Stem biomass (new params)',figsize=(10.2,6.5));clf()
-    plot_var_PFTs(['LIVESTEMC','DEADSTEMC'],vegdata_PFTs_newparams,meas_stem_C,longname='Stem C')
-
-    # For now, assuming we can map rhizome biomass to coarse root C. But maybe it should be combined with storage C or something?
-    # figure('Coarse root vs rhizome biomass (PFT)',figsize=(10.2,6.5));clf()
-    # meas_rhizome_C=(Koug_meas_biomass['RhizomeBiomass_gperm2']*Koug_meas_chem['RhizomeC_percent']/100)
-    # plot_var_PFTs(['LIVECROOTC','DEADCROOTC'],meas_rhizome_C,longname='Coarse root C')
-
-    figure('NPP (old params)',figsize=(10.2,6.5));clf()
-    # NPP measurements are annual estimates, so probably doesn't make sense to compare with seasonal unless we are plotting cumulative NPP
-    # Also need to deal with roots not being species-specific
-
-    # meas_NPP_C=(Koug_meas_biomass['LeafNPP_gperm2peryr']*Koug_meas_chem['LeafC_percent']/100)+\
-    #     (Koug_meas_biomass['StemNPP_gperm2peryr']*Koug_meas_chem['StemC_percent']/100)+\
-    #     (Koug_meas_biomass['FineRootNPP_gperm2peryr']*Koug_meas_chem['FineRootC_percent']/100)
-    plot_var_PFTs('NPP',vegdata_PFTs_oldparams,modfactor=3600*24,units='gC m$^{-2}$ day $^{-1}$')
-    figure('NPP (new params)',figsize=(10.2,6.5));clf()
-    plot_var_PFTs('NPP',vegdata_PFTs_newparams,modfactor=3600*24,units='gC m$^{-2}$ day $^{-1}$')
-
-    figure('Cumulative AGNPP (old params)',figsize=(10.2,6.5));clf()
-    # NPP measurements are annual estimates, so probably doesn't make sense to compare with seasonal unless we are plotting cumulative NPP
-    # Also need to deal with roots not being species-specific
     meas_NPP_C=(Koug_meas_biomass['LeafNPP_gperm2peryr']*Koug_meas_chem['LeafC_percent']/100)+\
         (Koug_meas_biomass['StemNPP_gperm2peryr']*Koug_meas_chem['StemC_percent']/100)#+\
+
     meas_froot_NPP =(Koug_meas_biomass['FineRootNPP_gperm2peryr']*Koug_meas_chem['FineRootC_percent']/100).groupby('Ecotype').sum()
 
-    sp_h=plot_var_PFTs('AGNPP',vegdata_PFTs_oldparams,modfactor=3600*24,units='gC m$^{-2}$',cumulative=True,obsdata=meas_NPP_C,minyear=maxyear-1,maxyear=maxyear)
-    for axnum in range(len(sp_h)):
-        sp_h[axnum].set_ylim(bottom=-1,top=600)
+    nplots=6
+    for econum in range(len(landscape_ecotypes)):
+        fig=figure(ecotype_names[landscape_ecotypes[econum]],figsize=(15,5))
+        fig.clf()
+        
+        leaf_old=subplot(2,nplots,1)
+        leaf_new=subplot(2,nplots,nplots+1)
+        froot_old=subplot(2,nplots,2)
+        froot_new=subplot(2,nplots,nplots+2)
+        stem_old=subplot(2,nplots,3)
+        stem_new=subplot(2,nplots,nplots+3)
+        npp_old=subplot(2,nplots,4)
+        npp_new=subplot(2,nplots,nplots+4)
+        cnpp_old=subplot(2,nplots,5)
+        cnpp_new=subplot(2,nplots,nplots+5)
+        height_old=subplot(2,nplots,6)
+        height_new=subplot(2,nplots,nplots+6)
+        
 
-    figure('Cumulative AGNPP (new params)',figsize=(10.2,6.5));clf()
-    sp_h=plot_var_PFTs('AGNPP',vegdata_PFTs_newparams,modfactor=3600*24,units='gC m$^{-2}$',cumulative=True,obsdata=meas_NPP_C,maxyear=maxyear,minyear=maxyear-1)
-    for axnum in range(len(sp_h)):
-        sp_h[axnum].set_ylim(bottom=-1,top=600)
+        plot_var_PFTs('LEAFC',vegdata_PFTs_oldparams,obsdata=meas_leaf_C,ecotype_num=econum,ax=leaf_old)
+        plot_var_PFTs('LEAFC',vegdata_PFTs_newparams,obsdata=meas_leaf_C,ecotype_num=econum,ax=leaf_new)
 
+        # Should rhizomes be treated as fine or coarse roots?
+        plot_var_PFTs('FROOTC',vegdata_PFTs_oldparams,obsdata=meas_root_C,plotsum=True,ecotype_num=econum,ax=froot_old)
+        plot_var_PFTs('FROOTC',vegdata_PFTs_newparams,obsdata=meas_root_C,plotsum=True,ecotype_num=econum,ax=froot_new)
 
-    #figure('Cumulative BGNPP (PFT)',figsize=(10.2,6.5));clf()
-    #meas_rhizomeNPP=(Koug_meas_biomass['RhizomeNPP_gperm2peryr']*Koug_meas_chem['RhizomeC_percent']/100)
+        plot_var_PFTs(['LIVESTEMC','DEADSTEMC'],vegdata_PFTs_oldparams,obsdata=meas_stem_C,longname='Stem C',ecotype_num=econum,ax=stem_old)
+        plot_var_PFTs(['LIVESTEMC','DEADSTEMC'],vegdata_PFTs_newparams,obsdata=meas_stem_C,longname='Stem C',ecotype_num=econum,ax=stem_new)
 
-    #sp_h=plot_var_PFTs('BGNPP',modfactor=3600*24,units='gC m$^{-2}$',cumulative=True,obsdata=meas_rhizomeNPP,maxyear=2009)
+        plot_var_PFTs('NPP',vegdata_PFTs_oldparams,longname='NPP',modfactor=3600*24,units='gC m$^{-2}$ day $^{-1}$',ecotype_num=econum,ax=npp_old)
+        plot_var_PFTs('NPP',vegdata_PFTs_newparams,longname='NPP',modfactor=3600*24,units='gC m$^{-2}$ day $^{-1}$',ecotype_num=econum,ax=npp_new)
 
-    #total_mod_BGNPP=(vegdata_PFTs['BGNPP_unweighted']*vegdata_PFTs.weights).groupby('ecotype').sum(dim='PFT').cumsum(dim='time')*3600*24
-    #total_mod_BGNPP=total_mod_BGNPP-total_mod_BGNPP.sel(time=datetime.date(2008,1,1))
-    #for axnum in range(len(sp_h)):
-    #    sp_h[axnum].plot(total_mod_BGNPP.time,total_mod_BGNPP.sel(ecotype=axnum) ,'-',c='C0')
-    #    obstotal=meas_rhizomeNPP.groupby('Ecotype').sum()[landscape_ecotypes[axnum]]+meas_froot_NPP[landscape_ecotypes[axnum]]
-    #    sp_h[axnum].plot([datetime.date(2008,1,1),datetime.date(2009,1,1)],[obstotal,obstotal],'--',c='C0')
-    #    sp_h[axnum].set_ylim(bottom=-1,top=600)
+        dat=plot_var_PFTs('AGNPP',vegdata_PFTs_oldparams,longname='AGNPP',modfactor=3600*24,units='gC m$^{-2}$',cumulative=True,obsdata=meas_NPP_C,minyear=maxyear-1,maxyear=maxyear,ecotype_num=econum,ax=cnpp_old)
+        t=array([tt.year + (tt.dayofyr-1)/365 for tt in dat['time'].data])
+        datmax=dat.isel(time=nonzero(t<=maxyear)[0][-1],ecotype=econum).max()
+        cnpp_old.set_ylim(bottom=-1,top=max(datmax*1.1,meas_NPP_C[landscape_ecotypes[econum]].max()*1.1))
 
+        dat=plot_var_PFTs('AGNPP',vegdata_PFTs_newparams,longname='AGNPP',modfactor=3600*24,units='gC m$^{-2}$',cumulative=True,obsdata=meas_NPP_C,maxyear=maxyear,minyear=maxyear-1,ecotype_num=econum,ax=cnpp_new)
+        datmax=dat.isel(time=nonzero(t<=maxyear)[0][-1],ecotype=econum).max()
+        cnpp_new.set_ylim(bottom=-1,top=max(datmax*1.1,meas_NPP_C[landscape_ecotypes[econum]].max()*1.1))
 
-    figure('Canopy height (old params)',figsize=(10.2,6.5));clf()
-    plot_var_PFTs('HTOP',vegdata_PFTs_oldparams,weight_area=False)
-    figure('Canopy height (new params)',figsize=(10.2,6.5));clf()
-    plot_var_PFTs('HTOP',vegdata_PFTs_newparams,weight_area=False)
-    
+        plot_var_PFTs('HTOP',vegdata_PFTs_oldparams,weight_area=False,ecotype_num=econum,ax=height_old)
+        plot_var_PFTs('HTOP',vegdata_PFTs_newparams,weight_area=False,ecotype_num=econum,ax=height_new)
+   
+        froot_old.legend(loc=(-1,1.2),ncol=7,fontsize='small')
+        
+        figtext(0.5,0.95,ecotype_names[landscape_ecotypes[econum]],ha='center',fontsize='large')
+        figtext(0.02,0.25,'Updated params',rotation=90,va='center',fontsize='large')
+        figtext(0.02,0.75,'Old params',rotation=90,va='center',fontsize='large')
+
+        tight_layout(rect=(0.03,0.0,1.0,0.95))
 
     show()
 

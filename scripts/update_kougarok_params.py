@@ -131,7 +131,7 @@ if __name__=='__main__':
 
     # Values from TT in Verity's data description Table 3
     change_param('froot_long','arctic_wet_graminoid',3.13)
-    change_param('froot_long','arctic_dry_garminoid',3.13)
+    change_param('froot_long','arctic_dry_graminoid',3.13)
 
     # Forb
     # Probably not enough data to constrain roots (no site with high forb coverage). Make same as graminoids?
