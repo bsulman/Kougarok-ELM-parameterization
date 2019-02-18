@@ -59,11 +59,13 @@ if __name__=='__main__':
     froot_leaf_TT=froot_leaf('TT','dwarf shrub evergreen')
     froot_leaf_NAMC=froot_leaf('NAMC','dwarf shrub evergreen')
     change_param('froot_leaf','arctic_evergreen_shrub_dwarf',froot_leaf_NAMC )
-   
+    change_param('froot_long','arctic_evergreen_shrub_dwarf',1.5) # Value from Verity's data description Table 3
+
     # SLA in Verity's data is in cm2/g. Parameter in model is in m2/g. Divide obs by 100**2 to convert units
     change_param('slatop','arctic_evergreen_shrub_dwarf',Koug_meas_chem['LeafSLA_cm2perg'][:,'dwarf shrub evergreen'].mean()/100**2)
     change_param('leafcn','arctic_evergreen_shrub_dwarf',obs_leafCN[:,'dwarf shrub evergreen'].mean())
     change_param('frootcn','arctic_evergreen_shrub_dwarf',obs_frootCN)
+
 
     printnote('Model divides stems into "dead" (heartwood) and live components with different C:N ratios. How to compare with measurements?')
 
@@ -77,6 +79,7 @@ if __name__=='__main__':
     change_param('slatop','arctic_deciduous_shrub_dwarf',Koug_meas_chem['LeafSLA_cm2perg'][:,'dwarf shrub deciduous'].mean()/100**2)
     change_param('leafcn','arctic_deciduous_shrub_dwarf',obs_leafCN[:,'dwarf shrub deciduous'].mean())
     change_param('frootcn','arctic_deciduous_shrub_dwarf',obs_frootCN)
+
 
     # Low deciduous shrub
     change_param('froot_leaf','arctic_deciduous_shrub_low',meas_root_C['DSLT']/meas_leaf_C['DSLT'].sum()  )
@@ -125,6 +128,10 @@ if __name__=='__main__':
     change_param('leafcn','arctic_wet_graminoid',obs_leafCN[:,'graminoid'].mean())
     change_param('frootcn','arctic_dry_graminoid',obs_frootCN)
     change_param('frootcn','arctic_wet_graminoid',obs_frootCN)
+
+    # Values from TT in Verity's data description Table 3
+    change_param('froot_long','arctic_wet_graminoid',3.13)
+    change_param('froot_long','arctic_dry_garminoid',3.13)
 
     # Forb
     # Probably not enough data to constrain roots (no site with high forb coverage). Make same as graminoids?
