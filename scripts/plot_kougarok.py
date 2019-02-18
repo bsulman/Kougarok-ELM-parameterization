@@ -344,5 +344,68 @@ if __name__=='__main__':
 
         tight_layout(rect=(0.03,0.0,1.0,0.95))
 
+
+    # Plot some biomass ratios
+
+    meas_leaf_C=(Koug_meas_biomass['LeafBiomass_gperm2']*Koug_meas_chem['LeafC_percent']/100)
+    meas_root_C=(Koug_meas_biomass['FineRootBiomass_gperm2'][:,'mixed']*(Koug_meas_chem['FineRootC_percent']/100))[:,'mixed']
+    meas_stem_C=(Koug_meas_biomass['StemBiomass_gperm2']*(Koug_meas_chem['StemC_percent']/100))
+
+    obs_leafCN = Koug_meas_chem['LeafC_percent']/Koug_meas_chem['LeafN_percent']
+    obs_stemCN = Koug_meas_chem['StemC_percent']/Koug_meas_chem['StemN_percent']
+    obs_frootCN = 54.6/1.3 # Obs uses a single value for fine roots
+    # Measured tissue C:N ratios are in weight units, and model expects gC/gN so they should be comparable.
+
+
+    # For now: let's assume that relative amount of leaf biomass is proportional to relative amount of root biomass
+    # But we may want to change to a different approach like PFT % coverage
+    # Or does it make more sense to calculate these at the ecotype scale?
+    # Also: This param is really defined to be NPP ratio, not biomass ratio. Should we parameterize using NPP measurements instead?
+    leafCfrac=meas_leaf_C/meas_leaf_C.groupby('Ecotype').sum()
+
+    def froot_leaf(ecotype,pft):
+        froot_leaf=meas_root_C[ecotype]*leafCfrac[ecotype][pft]/meas_leaf_C[ecotype][pft]
+        #print('{ecotype:s}: {pft:s} leaf frac {leafCfrac:1.2f}, froot_leaf = {froot_leaf:1.2f}'.format(leafCfrac=leafCfrac[ecotype][pft],ecotype=ecotype,pft=pft,froot_leaf=froot_leaf))
+        return froot_leaf
+
+    def leaf_stem(ecotype,pft):
+        return meas_stem_C[ecotype]/meas_leaf_C[ecotype][pft] 
+
+    leaf=vegdata_PFTs_oldparams['LEAFC_unweighted']
+    stemleafratio_oldparams=xarray.Dataset({'stem_leaf_ratio_unweighted':(vegdata_PFTs_oldparams['LIVESTEMC_unweighted']+vegdata_PFTs_oldparams['DEADSTEMC_unweighted'])/leaf.where(leaf>0.01).rolling(time=365*2).max()})
+    leaf=vegdata_PFTs_newparams['LEAFC_unweighted']
+    stemleafratio_newparams=xarray.Dataset({'stem_leaf_ratio_unweighted':(vegdata_PFTs_newparams['LIVESTEMC_unweighted']+vegdata_PFTs_newparams['DEADSTEMC_unweighted'])/leaf.where(leaf>0.01).rolling(time=365*2).max()})
+    frootleafratio_oldparams=xarray.Dataset({'froot_leaf_ratio_unweighted':vegdata_PFTs_oldparams['FROOTC_unweighted']/vegdata_PFTs_oldparams['LEAFC_unweighted']})
+    frootleafratio_newparams=xarray.Dataset({'froot_leaf_ratio_unweighted':vegdata_PFTs_newparams['FROOTC_unweighted']/vegdata_PFTs_newparams['LEAFC_unweighted']})
+
+    froot_leaf_obs = meas_root_C/meas_leaf_C.sum(level='Ecotype')
+
+    nplots=2
+    for econum in range(len(landscape_ecotypes)):
+        fig=figure(ecotype_names[landscape_ecotypes[econum]]+' ratios',figsize=(8,5))
+        fig.clf()
+        
+        frootleaf_old=subplot(2,nplots,1)
+        frootleaf_new=subplot(2,nplots,nplots+1)
+        stemleaf_old=subplot(2,nplots,2)
+        stemleaf_new=subplot(2,nplots,nplots+2)
+
+        plot_var_PFTs('stem_leaf_ratio',stemleafratio_oldparams,obsdata=meas_stem_C/meas_leaf_C,weight_area=False,longname='Stem to leaf ratio',units='gC/gC',ecotype_num=econum,ax=stemleaf_old)
+        plot_var_PFTs('stem_leaf_ratio',stemleafratio_newparams,obsdata=meas_stem_C/meas_leaf_C,weight_area=False,longname='Stem to leaf ratio',units='gC/gC',ecotype_num=econum,ax=stemleaf_new)
+        stemleaf_new.legend(fontsize='small',ncol=2)
+    
+        plot_var_PFTs('froot_leaf_ratio',frootleafratio_oldparams,weight_area=False,longname='Froot to leaf ratio',units='gC/gC',ecotype_num=econum,ax=frootleaf_old)
+        plot_var_PFTs('froot_leaf_ratio',frootleafratio_newparams,weight_area=False,longname='Froot to leaf ratio',units='gC/gC',ecotype_num=econum,ax=frootleaf_new)
+        frootleaf_old.plot([minyear,maxyear],[froot_leaf_obs[landscape_ecotypes[econum]],froot_leaf_obs[landscape_ecotypes[econum]]],'--',c='C0')
+        frootleaf_new.plot([minyear,maxyear],[froot_leaf_obs[landscape_ecotypes[econum]],froot_leaf_obs[landscape_ecotypes[econum]]],'--',c='C0')
+
+        #froot_old.legend(loc=(-1,1.2),ncol=7,fontsize='small')
+        
+        figtext(0.5,0.95,ecotype_names[landscape_ecotypes[econum]]+' ratios',ha='center',fontsize='large')
+        figtext(0.02,0.25,'Updated params',rotation=90,va='center',fontsize='large')
+        figtext(0.02,0.75,'Old params',rotation=90,va='center',fontsize='large')
+
+        tight_layout(rect=(0.03,0.0,1.0,0.95))
+    
     show()
 
