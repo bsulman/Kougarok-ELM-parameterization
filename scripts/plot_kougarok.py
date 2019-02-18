@@ -136,7 +136,7 @@ obsdata_PFT_mappings={'dwarf shrub deciduous':'arctic_deciduous_shrub_dwarf',
 
 
 
-def plot_var_PFTs(varname,moddata,obsdata=None,minyear=0,maxyear=150,longname=None,units=None,modfactor=1.0,cumulative=False,weight_area=True):
+def plot_var_PFTs(varname,moddata,obsdata=None,minyear=0,maxyear=150,longname=None,units=None,modfactor=1.0,cumulative=False,weight_area=True,plotsum=False):
     if isinstance(varname,str):
         dat=moddata[varname+'_unweighted']
         if longname is None:
@@ -164,7 +164,7 @@ def plot_var_PFTs(varname,moddata,obsdata=None,minyear=0,maxyear=150,longname=No
     import datetime
     
     if not isinstance(moddata['time'].data[0],numpy.datetime64):
-        t=array([tt.year + (tt.month-.5)/12 for tt in moddata['time'].data])
+        t=array([tt.year + (tt.dayofyr-1)/365 for tt in moddata['time'].data])
     
         mindate=minyear
         maxdate=maxyear
@@ -188,7 +188,12 @@ def plot_var_PFTs(varname,moddata,obsdata=None,minyear=0,maxyear=150,longname=No
 
         title(ecotype_names[landscape_ecotypes[ecotype_num]])
         for pft in moddata.PFT.values:
-            plot(t,dat.sel(ecotype=ecotype_num,PFT=pft)*modfactor,c=pft_colors[pft])
+            pftlabel=pft_names[pft]
+            if pftlabel.startswith('arctic_'):
+                pftlabel=pftlabel[len('arctic_'):]
+            plot(t,dat.sel(ecotype=ecotype_num,PFT=pft)*modfactor,c=pft_colors[pft],label=pftlabel)
+        if plotsum:
+            plot(t,dat.sel(ecotype=ecotype_num).sum(dim='PFT')*modfactor,c='C0',label='Sum of PFTs')
         xlabel('Time')
         ylabel('%s (%s)'%(longname,units))
         ax.set_xlim(left=mindate,right=maxdate)
@@ -200,13 +205,7 @@ def plot_var_PFTs(varname,moddata,obsdata=None,minyear=0,maxyear=150,longname=No
                 plot([mindate,maxdate],[obsdata[(landscape_ecotypes[ecotype_num],pft)],obsdata[(landscape_ecotypes[ecotype_num],pft)]],c=pft_colors[(pft_names.index(obsdata_PFT_mappings[pft]))],ls='--')
 
 
-    leg_names=[]
-    for name in pft_names:
-        if name.startswith('arctic_'):
-            leg_names.append(name[len('arctic_'):])
-        else:
-            leg_names.append(name)
-    legend(labels=leg_names,fontsize='small',loc=(1.02,0.0))
+    legend(fontsize='small',loc=(1.02,0.0))
 
 
     tight_layout()
@@ -229,7 +228,7 @@ if __name__=='__main__':
     #data_default=xarray.open_dataset(outputdata_dir+'/hist/ELMuserpft_Kougarok_ICB20TRCNPRDCTCBC_defaultparams.clm2.h.nc')
 
     minyear=0
-    maxyear=150
+    maxyear=100
 
     meas_leaf_C=(Koug_meas_biomass['LeafBiomass_gperm2']*Koug_meas_chem['LeafC_percent']/100).groupby('Ecotype').sum()
     meas_nonvasc_C=(Koug_meas_biomass['NonvascularBiomass_gperm2']*0.5).groupby('Ecotype').sum()
@@ -287,6 +286,7 @@ if __name__=='__main__':
     meas_nonvasc_C=(Koug_meas_biomass['NonvascularBiomass_gperm2']*0.5)
     # Should this include nonvascular biomass?
 
+
     figure('Leaf biomass (old params)',figsize=(10.2,6.5));clf()
     for ecotype in landscape_ecotypes:
         meas_leaf_C[ecotype,'moss']=meas_nonvasc_C.loc[ecotype,'moss']
@@ -302,10 +302,10 @@ if __name__=='__main__':
 
     figure('Fine root biomass (old params)',figsize=(10.2,6.5));clf()
     meas_root_C=Koug_meas_biomass['FineRootBiomass_gperm2'][:,'mixed']*(Koug_meas_chem['FineRootC_percent']/100)
-    plot_var_PFTs('FROOTC',vegdata_PFTs_oldparams,meas_root_C)
+    plot_var_PFTs('FROOTC',vegdata_PFTs_oldparams,meas_root_C,plotsum=True)
     # Should rhizomes be treated as fine or coarse roots?
     figure('Fine root biomass (new params)',figsize=(10.2,6.5));clf()
-    plot_var_PFTs('FROOTC',vegdata_PFTs_newparams,meas_root_C)
+    plot_var_PFTs('FROOTC',vegdata_PFTs_newparams,meas_root_C,plotsum=True)
 
     figure('Stem biomass (old params)',figsize=(10.2,6.5));clf()
     meas_stem_C=(Koug_meas_biomass['StemBiomass_gperm2']*Koug_meas_chem['StemC_percent']/100)
