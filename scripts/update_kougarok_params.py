@@ -67,8 +67,8 @@ if __name__=='__main__':
     printnote('Setting froot_leaf for evergreen species to include rhizomes, and weighting root turnover by rhizome biomass and turnover rates')
     # Dwarf evergreen shrub rhizome turnover time of 5 years from Table 5 in Verity's data description
     rhizome_leaf_NAMC=meas_rhizome_C['NAMC']['dwarf shrub evergreen']/meas_leaf_C['NAMC']['dwarf shrub evergreen']
-    change_param('froot_leaf',pft,froot_leaf_NAMC/1.5 + rhizome_leaf_NAMC/5.0  )
-    change_param('froot_long',pft,(1.5*froot_leaf_NAMC + 5.0*rhizome_leaf_NAMC)/(froot_leaf_NAMC+rhizome_leaf_NAMC)) # Value from Verity's data description Table 3
+    change_param('froot_leaf',pft,froot_leaf_NAMC/1.5 + rhizome_leaf_NAMC/20.0  )
+    change_param('froot_long',pft,(1.5*froot_leaf_NAMC + 20.0*rhizome_leaf_NAMC)/(froot_leaf_NAMC+rhizome_leaf_NAMC)) # Longevity estimated from Verity's data description Table 3
     change_param('fcur',pft,fcur_evergreen)
 
     # SLA in Verity's data is in cm2/g. Parameter in model is in m2/g. Divide obs by 100**2 to convert units
@@ -170,6 +170,11 @@ if __name__=='__main__':
     change_param('season_decid',pftdry,0)
     change_param('evergreen',pftwet,1)
     change_param('evergreen',pftdry,1)
+
+    printnote('Assigning graminoid leaf longevity of 2 years based on 50% leaf replacement estimate from Shaver and Laundre 2003 GCB paper')
+    change_param('leaf_long',pftwet,2.0)
+    change_param('leaf_long',pftdry,2.0)
+
 
     # Forb
     # Probably not enough data to constrain roots (no site with high forb coverage). Make same as graminoids?
