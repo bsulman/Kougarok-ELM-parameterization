@@ -6,9 +6,9 @@ import pandas
 params_file='param_files/clm_params_newpfts_c180524_orig.nc'
 params_file_default='param_files/clm_params_defaultpfts_c180524_orig.nc'
 
-params_fengming=xarray.open_dataset(params_file)
-params_default=xarray.open_dataset(params_file_default)
-params_new=xarray.open_dataset('clm_params_updated.nc')
+params_fengming=xarray.open_dataset(params_file,autoclose=True)
+params_default=xarray.open_dataset(params_file_default,autoclose=True)
+params_new=xarray.open_dataset('clm_params_updated.nc',autoclose=True)
 
 pft_names=[name.strip() for name in params_fengming['pftname'].values.astype(str)]
 pft_names_default=[name.strip() for name in params_default['pftname'].values.astype(str)]
@@ -33,7 +33,7 @@ PFT_percents=pandas.DataFrame(data=surfdata.PCT_NAT_PFT.values.squeeze(),index=p
 PFT_percents_default=pandas.DataFrame(data=surfdata_default.PCT_NAT_PFT.values.squeeze(),index=pft_names_default[:17],columns=landscape_ecotypes)
 
 def read_pftfile(filename,maxyear=None):
-    output_PFTs=xarray.open_dataset(filename)
+    output_PFTs=xarray.open_dataset(filename,autoclose=True)
     if maxyear is not None:
         output_PFTs=output_PFTs.sel(time=array([xx.year for xx in output_PFTs.time.values])<=maxyear)  
 
@@ -299,12 +299,13 @@ if __name__=='__main__':
     
     meas_root_C=Koug_meas_biomass['FineRootBiomass_gperm2'][:,'mixed']*(Koug_meas_chem['FineRootC_percent']/100)
     meas_stem_C=(Koug_meas_biomass['StemBiomass_gperm2']*Koug_meas_chem['StemC_percent']/100)
+    meas_rhizome_C=(Koug_meas_biomass['RhizomeBiomass_gperm2']*Koug_meas_chem['RhizomeC_percent']/100)
     meas_NPP_C=(Koug_meas_biomass['LeafNPP_gperm2peryr']*Koug_meas_chem['LeafC_percent']/100)+\
         (Koug_meas_biomass['StemNPP_gperm2peryr']*Koug_meas_chem['StemC_percent']/100)#+\
 
     meas_froot_NPP =(Koug_meas_biomass['FineRootNPP_gperm2peryr']*Koug_meas_chem['FineRootC_percent']/100).groupby('Ecotype').sum()
 
-    plotvars=['leaf','froot','stem','store','npp','cnpp','height']
+    plotvars=['leaf','froot','croot','stem','store','npp','cnpp','height']
     nplots=len(plotvars)
     for econum in range(len(landscape_ecotypes)):
         fig=figure(ecotype_names[landscape_ecotypes[econum]],figsize=(15,5))
@@ -323,6 +324,9 @@ if __name__=='__main__':
         # Should rhizomes be treated as fine or coarse roots?
         plot_var_PFTs('FROOTC',vegdata_PFTs_oldparams,obsdata=meas_root_C,plotsum=True,ecotype_num=econum,ax=subplot_handles['froot_old'])
         plot_var_PFTs('FROOTC',vegdata_PFTs_newparams,obsdata=meas_root_C,plotsum=True,ecotype_num=econum,ax=subplot_handles['froot_new'])
+
+        plot_var_PFTs(['LIVECROOTC','DEADCROOTC'],vegdata_PFTs_oldparams,longname='C Root & rhizome',obsdata=meas_rhizome_C,plotsum=True,ecotype_num=econum,ax=subplot_handles['croot_old'])
+        plot_var_PFTs(['LIVECROOTC','DEADCROOTC'],vegdata_PFTs_newparams,longname='C Root & rhizome',obsdata=meas_rhizome_C,plotsum=True,ecotype_num=econum,ax=subplot_handles['croot_new'])
 
         plot_var_PFTs(['LIVESTEMC','DEADSTEMC'],vegdata_PFTs_oldparams,obsdata=meas_stem_C,longname='Stem C',ecotype_num=econum,ax=subplot_handles['stem_old'])
         plot_var_PFTs(['LIVESTEMC','DEADSTEMC'],vegdata_PFTs_newparams,obsdata=meas_stem_C,longname='Stem C',ecotype_num=econum,ax=subplot_handles['stem_new'])

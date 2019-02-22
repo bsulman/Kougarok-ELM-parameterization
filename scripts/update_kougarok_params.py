@@ -37,6 +37,8 @@ if __name__=='__main__':
 
     meas_leaf_C=(Koug_meas_biomass['LeafBiomass_gperm2']*Koug_meas_chem['LeafC_percent']/100)
     meas_root_C=(Koug_meas_biomass['FineRootBiomass_gperm2'][:,'mixed']*(Koug_meas_chem['FineRootC_percent']/100))[:,'mixed']
+    meas_rhizome_C=(Koug_meas_biomass['RhizomeBiomass_gperm2']*Koug_meas_chem['RhizomeC_percent']/100)
+    meas_rhizome_NPP=(Koug_meas_biomass['RhizomeNPP_gperm2peryr']*Koug_meas_chem['RhizomeC_percent']/100)
 
     obs_leafCN = Koug_meas_chem['LeafC_percent']/Koug_meas_chem['LeafN_percent']
     obs_stemCN = Koug_meas_chem['StemC_percent']/Koug_meas_chem['StemN_percent']
@@ -62,8 +64,11 @@ if __name__=='__main__':
     pft='arctic_evergreen_shrub_dwarf'
     froot_leaf_TT=froot_leaf('TT','dwarf shrub evergreen')
     froot_leaf_NAMC=froot_leaf('NAMC','dwarf shrub evergreen')
-    change_param('froot_leaf',pft,froot_leaf_NAMC )
-    change_param('froot_long',pft,1.5) # Value from Verity's data description Table 3
+    printnote('Setting froot_leaf for evergreen species to include rhizomes, and weighting root turnover by rhizome biomass and turnover rates')
+    # Dwarf evergreen shrub rhizome turnover time of 5 years from Table 5 in Verity's data description
+    rhizome_leaf_NAMC=meas_rhizome_C['NAMC']['dwarf shrub evergreen']/meas_leaf_C['NAMC']['dwarf shrub evergreen']
+    change_param('froot_leaf',pft,froot_leaf_NAMC/1.5 + rhizome_leaf_NAMC/5.0  )
+    change_param('froot_long',pft,(1.5*froot_leaf_NAMC + 5.0*rhizome_leaf_NAMC)/(froot_leaf_NAMC+rhizome_leaf_NAMC)) # Value from Verity's data description Table 3
     change_param('fcur',pft,fcur_evergreen)
 
     # SLA in Verity's data is in cm2/g. Parameter in model is in m2/g. Divide obs by 100**2 to convert units
@@ -87,17 +92,6 @@ if __name__=='__main__':
     change_param('frootcn',pft,obs_frootCN)
     change_param('fcur',pft,fcur_deciduous)
 
-
-    # Low deciduous shrub
-    pft='arctic_deciduous_shrub_low'
-    change_param('froot_leaf','arctic_deciduous_shrub_low',meas_root_C['DSLT']/meas_leaf_C['DSLT'].sum()  )
-
-    change_param('slatop',pft,Koug_meas_chem['LeafSLA_cm2perg'][:,'low shrub deciduous'].mean()/100**2)
-    change_param('leafcn',pft,obs_leafCN[:,'low shrub deciduous'].mean())
-    change_param('frootcn',pft,obs_frootCN)
-    change_param('fcur',pft,fcur_deciduous)
-
-
     # Tall non-alder shrub
     pft='arctic_deciduous_shrub_tall'
     # Set this to total root_leaf ratio of all shrubs in WBT
@@ -111,6 +105,20 @@ if __name__=='__main__':
     change_param('leafcn',pft,obs_leafCN.loc[:,['tall shrub deciduous birch','tall shrub deciduous willow']].mean())
     change_param('frootcn',pft,obs_frootCN)
     change_param('fcur',pft,fcur_deciduous)
+    
+    
+    # Low deciduous shrub
+    pft='arctic_deciduous_shrub_low'
+    #change_param('froot_leaf',pft,meas_root_C['DSLT']/meas_leaf_C['DSLT'].sum()  )
+    printnote('Making froot_leaf for low shrubs intermediate between dwarf and tall values')
+    change_param('froot_leaf',pft, 0.5*(params['froot_leaf'][pft_names.index('arctic_deciduous_shrub_dwarf')]+params['froot_leaf'][pft_names.index('arctic_deciduous_shrub_tall')]).values)
+
+
+    change_param('slatop',pft,Koug_meas_chem['LeafSLA_cm2perg'][:,'low shrub deciduous'].mean()/100**2)
+    change_param('leafcn',pft,obs_leafCN[:,'low shrub deciduous'].mean())
+    change_param('frootcn',pft,obs_frootCN)
+    change_param('fcur',pft,fcur_deciduous)
+
     
     # Alder
     pft='arctic_deciduous_shrub_alder'
@@ -130,11 +138,16 @@ if __name__=='__main__':
     froot_leaf_TT=froot_leaf('TT','graminoid')
     froot_leaf_TTWBT=froot_leaf('TTWBT','graminoid')
     froot_leaf_WBT=froot_leaf('WBT','graminoid')
+    rhizome_leaf_TT=meas_rhizome_C['TT']['graminoid']/meas_leaf_C['TT']['graminoid']
+    rhizome_leaf_TTWBT=meas_rhizome_C['TTWBT']['graminoid']/meas_leaf_C['TTWBT']['graminoid']
+
     # Use mean of TT and TTWBT, which have more graminoids and similar values
     # Use same values for wet and dry graminoids in model for now
     printnote('Using same parameter values for wet and dry graminoids')
-    change_param('froot_leaf',pftdry,0.5*(froot_leaf_TT+froot_leaf_TTWBT))
-    change_param('froot_leaf',pftwet,0.5*(froot_leaf_TT+froot_leaf_TTWBT))
+    printnote('Calculating rhizome lifetime from NPP and biomass (assuming steady state)')
+    rhizome_lifetime = (meas_rhizome_C/meas_rhizome_NPP)['TT','graminoid']
+    change_param('froot_leaf',pftdry,0.5*(froot_leaf_TT+froot_leaf_TTWBT)/3.13 + 0.5*(rhizome_leaf_TT+rhizome_leaf_TTWBT)/rhizome_lifetime)
+    change_param('froot_leaf',pftwet,0.5*(froot_leaf_TT+froot_leaf_TTWBT)/3.13 + 0.5*(rhizome_leaf_TT+rhizome_leaf_TTWBT)/rhizome_lifetime)
 
     printnote('Graminoid SLA is much higher in WBT than other sites. What to do about that?')
     change_param('slatop',pftwet,Koug_meas_chem['LeafSLA_cm2perg'][:,'graminoid'].mean()/100**2)
@@ -145,12 +158,18 @@ if __name__=='__main__':
     change_param('frootcn',pftwet,obs_frootCN)
 
     # Values from TT in Verity's data description Table 3
-    change_param('froot_long',pftwet,3.13)
-    change_param('froot_long',pftdry,3.13)
+    frootfrac_graminoid=(froot_leaf_TT+froot_leaf_TTWBT)/(rhizome_leaf_TT+rhizome_leaf_TTWBT+froot_leaf_TT+froot_leaf_TTWBT)
+    change_param('froot_long',pftwet,3.13*frootfrac_graminoid + rhizome_lifetime*(1-frootfrac_graminoid))
+    change_param('froot_long',pftdry,3.13*frootfrac_graminoid + rhizome_lifetime*(1-frootfrac_graminoid))
 
-    change_param('fcur',pftwet,fcur_deciduous)
-    change_param('fcur',pftdry,fcur_deciduous)
+    change_param('fcur',pftwet,fcur_evergreen)
+    change_param('fcur',pftdry,fcur_evergreen)
 
+    printnote('According to Verity, grasses act more like evergreen plants. Do not drop leaves/roots every year')
+    change_param('season_decid',pftwet,0)
+    change_param('season_decid',pftdry,0)
+    change_param('evergreen',pftwet,1)
+    change_param('evergreen',pftdry,1)
 
     # Forb
     # Probably not enough data to constrain roots (no site with high forb coverage). Make same as graminoids?
