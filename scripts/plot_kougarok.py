@@ -6,11 +6,12 @@ import pandas
 params_file='param_files/clm_params_newpfts_c180524_orig.nc'
 params_file_default='param_files/clm_params_defaultpfts_c180524_orig.nc'
 
-params_data=xarray.open_dataset(params_file)
-params_default_data=xarray.open_dataset(params_file_default)
+params_fengming=xarray.open_dataset(params_file)
+params_default=xarray.open_dataset(params_file_default)
+params_new=xarray.open_dataset('clm_params_updated.nc')
 
-pft_names=[name.strip() for name in params_data['pftname'].values.astype(str)]
-pft_names_default=[name.strip() for name in params_default_data['pftname'].values.astype(str)]
+pft_names=[name.strip() for name in params_fengming['pftname'].values.astype(str)]
+pft_names_default=[name.strip() for name in params_default['pftname'].values.astype(str)]
 
 
 
@@ -196,7 +197,7 @@ def plot_var_PFTs(varname,moddata,ecotype_num,ax=None,obsdata=None,minyear=0,max
     ax.set_xlabel('Time')
     ax.set_ylabel('%s (%s)'%(longname,units))
     ax.set_xlim(left=mindate,right=maxdate)
-    ax.set_xticklabels(ax.get_xticks(),rotation=0) 
+    ax.xaxis.set_tick_params(rotation=0) 
 
     if obsdata is not None:
         # Collection was in 2016-2017, but model only goes through 2010. No big deal I guess.
@@ -215,16 +216,27 @@ def save_all_figs(dirname='Figures',format='png',**kwargs):
         figure(fname).savefig('{dirname:s}/{fname:s}.{format}'.format(dirname=dirname,format=format,fname=fname),**kwargs)
 
 
+def pft_params(paramdata,paramnames):
+    pftnames=[name.strip() for name in paramdata['pftname'].values.astype(str)]
+    if isinstance(paramnames,str):
+        paramnames=[paramnames]
+    pdict={'pftname':pftnames}
+    for name in paramnames:
+        pdict[name]=paramdata[name]
+    return pandas.DataFrame(pdict).set_index('pftname') 
+
 if __name__=='__main__':
     outputdata_dir='/nfs/data/ccsi/b0u/Kougarok/userpft'
 
-    vegdata_PFTs_oldparams=read_pftfile(outputdata_dir+'/accelspinup/ELMuserpft_adspinuptest_Kougarok_ICB1850CNPRDCTCBC.h1.nc')
-    vegdata_PFTs_newparams=read_pftfile(outputdata_dir+'/accelspinup/ELMuserpft_adspinuptest_newparams_Kougarok_ICB1850CNPRDCTCBC.h1.nc',maxyear=200)
+    #vegdata_PFTs_oldparams=read_pftfile(outputdata_dir+'/accelspinup/ELMuserpft_adspinuptest_Kougarok_ICB1850CNPRDCTCBC.h1.nc')
+    vegdata_PFTs_oldparams=read_pftfile(outputdata_dir+'/accelspinup/ELMuserpft_adspinuptest_newparams_Kougarok_ICB1850CNPRDCTCBC.h1.nc',maxyear=150)
+    #vegdata_PFTs_newparams=read_pftfile(outputdata_dir+'/accelspinup/ELMuserpft_adspinuptest_newparams_Kougarok_ICB1850CNPRDCTCBC.h1_20190220.nc',maxyear=150)
+    vegdata_PFTs_newparams=read_pftfile(outputdata_dir+'/accelspinup/ELMuserpft_adspinuptest_newparams_Kougarok_ICB1850CNPRDCTCBC.h1_fcur_20190221.nc',maxyear=150)
     #data=xarray.open_dataset(outputdata_dir+'/hist/ELMuserpft_Kougarok_ICB20TRCNPRDCTCBC.clm2.h.nc')
     #data_default=xarray.open_dataset(outputdata_dir+'/hist/ELMuserpft_Kougarok_ICB20TRCNPRDCTCBC_defaultparams.clm2.h.nc')
 
     minyear=0
-    maxyear=100
+    maxyear=50
 
     meas_leaf_C=(Koug_meas_biomass['LeafBiomass_gperm2']*Koug_meas_chem['LeafC_percent']/100).groupby('Ecotype').sum()
     meas_nonvasc_C=(Koug_meas_biomass['NonvascularBiomass_gperm2']*0.5).groupby('Ecotype').sum()
@@ -292,51 +304,49 @@ if __name__=='__main__':
 
     meas_froot_NPP =(Koug_meas_biomass['FineRootNPP_gperm2peryr']*Koug_meas_chem['FineRootC_percent']/100).groupby('Ecotype').sum()
 
-    nplots=6
+    plotvars=['leaf','froot','stem','store','npp','cnpp','height']
+    nplots=len(plotvars)
     for econum in range(len(landscape_ecotypes)):
         fig=figure(ecotype_names[landscape_ecotypes[econum]],figsize=(15,5))
         fig.clf()
-        
-        leaf_old=subplot(2,nplots,1)
-        leaf_new=subplot(2,nplots,nplots+1)
-        froot_old=subplot(2,nplots,2)
-        froot_new=subplot(2,nplots,nplots+2)
-        stem_old=subplot(2,nplots,3)
-        stem_new=subplot(2,nplots,nplots+3)
-        npp_old=subplot(2,nplots,4)
-        npp_new=subplot(2,nplots,nplots+4)
-        cnpp_old=subplot(2,nplots,5)
-        cnpp_new=subplot(2,nplots,nplots+5)
-        height_old=subplot(2,nplots,6)
-        height_new=subplot(2,nplots,nplots+6)
-        
 
-        plot_var_PFTs('LEAFC',vegdata_PFTs_oldparams,obsdata=meas_leaf_C,ecotype_num=econum,ax=leaf_old)
-        plot_var_PFTs('LEAFC',vegdata_PFTs_newparams,obsdata=meas_leaf_C,ecotype_num=econum,ax=leaf_new)
+        gs=fig.add_gridspec(ncols=nplots,nrows=2)
+        
+        subplot_handles={}
+        for var in plotvars:
+            subplot_handles[var+'_old']=fig.add_subplot(gs[0,plotvars.index(var)])
+            subplot_handles[var+'_new']=fig.add_subplot(gs[1,plotvars.index(var)])
+
+        plot_var_PFTs('LEAFC',vegdata_PFTs_oldparams,obsdata=meas_leaf_C,ecotype_num=econum,ax=subplot_handles['leaf_old'])
+        plot_var_PFTs('LEAFC',vegdata_PFTs_newparams,obsdata=meas_leaf_C,ecotype_num=econum,ax=subplot_handles['leaf_new'])
 
         # Should rhizomes be treated as fine or coarse roots?
-        plot_var_PFTs('FROOTC',vegdata_PFTs_oldparams,obsdata=meas_root_C,plotsum=True,ecotype_num=econum,ax=froot_old)
-        plot_var_PFTs('FROOTC',vegdata_PFTs_newparams,obsdata=meas_root_C,plotsum=True,ecotype_num=econum,ax=froot_new)
+        plot_var_PFTs('FROOTC',vegdata_PFTs_oldparams,obsdata=meas_root_C,plotsum=True,ecotype_num=econum,ax=subplot_handles['froot_old'])
+        plot_var_PFTs('FROOTC',vegdata_PFTs_newparams,obsdata=meas_root_C,plotsum=True,ecotype_num=econum,ax=subplot_handles['froot_new'])
 
-        plot_var_PFTs(['LIVESTEMC','DEADSTEMC'],vegdata_PFTs_oldparams,obsdata=meas_stem_C,longname='Stem C',ecotype_num=econum,ax=stem_old)
-        plot_var_PFTs(['LIVESTEMC','DEADSTEMC'],vegdata_PFTs_newparams,obsdata=meas_stem_C,longname='Stem C',ecotype_num=econum,ax=stem_new)
+        plot_var_PFTs(['LIVESTEMC','DEADSTEMC'],vegdata_PFTs_oldparams,obsdata=meas_stem_C,longname='Stem C',ecotype_num=econum,ax=subplot_handles['stem_old'])
+        plot_var_PFTs(['LIVESTEMC','DEADSTEMC'],vegdata_PFTs_newparams,obsdata=meas_stem_C,longname='Stem C',ecotype_num=econum,ax=subplot_handles['stem_new'])
 
-        plot_var_PFTs('NPP',vegdata_PFTs_oldparams,longname='NPP',modfactor=3600*24,units='gC m$^{-2}$ day $^{-1}$',ecotype_num=econum,ax=npp_old)
-        plot_var_PFTs('NPP',vegdata_PFTs_newparams,longname='NPP',modfactor=3600*24,units='gC m$^{-2}$ day $^{-1}$',ecotype_num=econum,ax=npp_new)
+        plot_var_PFTs('NPP',vegdata_PFTs_oldparams,longname='NPP',modfactor=3600*24,units='gC m$^{-2}$ day $^{-1}$',ecotype_num=econum,ax=subplot_handles['npp_old'])
+        plot_var_PFTs('NPP',vegdata_PFTs_newparams,longname='NPP',modfactor=3600*24,units='gC m$^{-2}$ day $^{-1}$',ecotype_num=econum,ax=subplot_handles['npp_new'])
 
-        dat=plot_var_PFTs('AGNPP',vegdata_PFTs_oldparams,longname='AGNPP',modfactor=3600*24,units='gC m$^{-2}$',cumulative=True,obsdata=meas_NPP_C,minyear=maxyear-1,maxyear=maxyear,ecotype_num=econum,ax=cnpp_old)
+        dat=plot_var_PFTs('AGNPP',vegdata_PFTs_oldparams,longname='AGNPP',modfactor=3600*24,units='gC m$^{-2}$',cumulative=True,obsdata=meas_NPP_C,minyear=maxyear-1,maxyear=maxyear,ecotype_num=econum,ax=subplot_handles['cnpp_old'])
         t=array([tt.year + (tt.dayofyr-1)/365 for tt in dat['time'].data])
         datmax=dat.isel(time=nonzero(t<=maxyear)[0][-1],ecotype=econum).max()
-        cnpp_old.set_ylim(bottom=-1,top=max(datmax*1.1,meas_NPP_C[landscape_ecotypes[econum]].max()*1.1))
+        subplot_handles['cnpp_old'].set_ylim(bottom=-1,top=max(datmax*1.1,meas_NPP_C[landscape_ecotypes[econum]].max()*1.1))
 
-        dat=plot_var_PFTs('AGNPP',vegdata_PFTs_newparams,longname='AGNPP',modfactor=3600*24,units='gC m$^{-2}$',cumulative=True,obsdata=meas_NPP_C,maxyear=maxyear,minyear=maxyear-1,ecotype_num=econum,ax=cnpp_new)
+        dat=plot_var_PFTs('AGNPP',vegdata_PFTs_newparams,longname='AGNPP',modfactor=3600*24,units='gC m$^{-2}$',cumulative=True,obsdata=meas_NPP_C,maxyear=maxyear,minyear=maxyear-1,ecotype_num=econum,ax=subplot_handles['cnpp_new'])
         datmax=dat.isel(time=nonzero(t<=maxyear)[0][-1],ecotype=econum).max()
-        cnpp_new.set_ylim(bottom=-1,top=max(datmax*1.1,meas_NPP_C[landscape_ecotypes[econum]].max()*1.1))
+        subplot_handles['cnpp_new'].set_ylim(bottom=-1,top=max(datmax*1.1,meas_NPP_C[landscape_ecotypes[econum]].max()*1.1))
 
-        plot_var_PFTs('HTOP',vegdata_PFTs_oldparams,weight_area=False,ecotype_num=econum,ax=height_old)
-        plot_var_PFTs('HTOP',vegdata_PFTs_newparams,weight_area=False,ecotype_num=econum,ax=height_new)
+        plot_var_PFTs('HTOP',vegdata_PFTs_oldparams,weight_area=False,ecotype_num=econum,ax=subplot_handles['height_old'])
+        plot_var_PFTs('HTOP',vegdata_PFTs_newparams,weight_area=False,ecotype_num=econum,ax=subplot_handles['height_new'])
    
-        froot_old.legend(loc=(-1,1.2),ncol=7,fontsize='small')
+        plot_var_PFTs('STORVEGC',vegdata_PFTs_oldparams,ecotype_num=econum,longname='Stored C',ax=subplot_handles['store_old'])
+        plot_var_PFTs('STORVEGC',vegdata_PFTs_newparams,ecotype_num=econum,longname='Stored C',ax=subplot_handles['store_new'])
+
+
+        subplot_handles['froot_old'].legend(loc=(-1,1.2),ncol=7,fontsize='small')
         
         figtext(0.5,0.95,ecotype_names[landscape_ecotypes[econum]],ha='center',fontsize='large')
         figtext(0.02,0.25,'Updated params',rotation=90,va='center',fontsize='large')
