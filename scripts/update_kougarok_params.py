@@ -1,6 +1,6 @@
 import xarray
 
-basedir='/home/b0u/Kougarok_param_edits'
+basedir='.'
 params=xarray.open_dataset(basedir+'/param_files/clm_params_newpfts_c180524_orig.nc',autoclose=True,)
 
 pft_names=[name.strip() for name in params['pftname'].values.astype(str)]

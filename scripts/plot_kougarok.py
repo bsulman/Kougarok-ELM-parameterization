@@ -137,7 +137,7 @@ obsdata_PFT_mappings={'dwarf shrub deciduous':'arctic_deciduous_shrub_dwarf',
 
 
 
-def plot_var_PFTs(varname,moddata,ecotype_num,ax=None,obsdata=None,minyear=0,maxyear=150,longname=None,units=None,modfactor=1.0,cumulative=False,weight_area=True,plotsum=False):
+def plot_var_PFTs(varname,moddata,ecotype_num,ax=None,obsdata=None,minyear=0,maxyear=150,longname=None,units=None,modfactor=1.0,cumulative=False,weight_area=True,plotsum=False,**kwargs):
     if isinstance(varname,str):
         dat=moddata[varname+'_unweighted'].copy()
         if longname is None:
@@ -191,9 +191,9 @@ def plot_var_PFTs(varname,moddata,ecotype_num,ax=None,obsdata=None,minyear=0,max
         pftlabel=pft_names[pft]
         if pftlabel.startswith('arctic_'):
             pftlabel=pftlabel[len('arctic_'):]
-        ax.plot(t,dat.sel(ecotype=ecotype_num,PFT=pft),c=pft_colors[pft],label=pftlabel)
+        ax.plot(t,dat.sel(ecotype=ecotype_num,PFT=pft),c=pft_colors[pft],label=pftlabel,**kwargs)
     if plotsum:
-        ax.plot(t,dat.sel(ecotype=ecotype_num).sum(dim='PFT'),c='C0',label='Sum of PFTs')
+        ax.plot(t,dat.sel(ecotype=ecotype_num).sum(dim='PFT'),c='C0',label='Sum of PFTs',**kwargs)
     ax.set_xlabel('Time')
     ax.set_ylabel('%s (%s)'%(longname,units))
     ax.set_xlim(left=mindate,right=maxdate)
@@ -427,7 +427,7 @@ if __name__=='__main__':
 
 
     figure('Temperature and root respiration');clf()
-    Tsoil10cm=xarray.open_dataset('/nfs/data/ccsi/b0u/Kougarok/userpft/accelspinup/ELMuserpft_Kougarok_ICB1850CNPRDCTCBC_clm2_h_20190129.nc',autoclose=True)['TSOI_10CM']
+    Tsoil10cm=xarray.open_dataset(outputdata_dir+'/ELMuserpft_Kougarok_ICB1850CNPRDCTCBC_clm2_h_20190129.nc',autoclose=True)['TSOI_10CM']
     t2=array([tt.year + (tt.month-.5)/12 for tt in Tsoil10cm.time.data])
     plot(t2,Tsoil10cm.isel(lndgrid=1)-273.15,'b-')
     plot([0,maxyear],[0.0,0.0],'k--')
@@ -440,5 +440,29 @@ if __name__=='__main__':
 
     tight_layout()
 
-    show()
 
+    figure('Temperature and root respiration cumulative');clf()
+    Tsoil10cm=xarray.open_dataset(outputdata_dir+'/ELMuserpft_Kougarok_ICB1850CNPRDCTCBC_clm2_h_20190129.nc',autoclose=True)['TSOI_10CM']
+    t2=array([tt.year + (tt.month-.5)/12 for tt in Tsoil10cm.time.data])
+    plot(t2,Tsoil10cm.isel(lndgrid=1)-273.15,'b-')
+    plot([0,maxyear],[0.0,0.0],'k--')
+    ylabel('Soil temperature (C)')
+
+    ax2=twinx()
+    t=array([tt.year + (tt.dayofyr-1)/365 for tt in vegdata_PFTs_newparams['time'].data])
+    ecotype_num=0
+    startyear=10
+    endyear=25
+    for yr in range(startyear,endyear):
+        growingseason_start=nonzero((t>=yr)&(vegdata_PFTs_newparams.sel(PFT=3,ecotype=ecotype_num)['GPP_unweighted'].values>0))[0][0]
+        growingseason_start_nextyear=nonzero((t>=yr+1)&(vegdata_PFTs_newparams.sel(PFT=3,ecotype=ecotype_num)['GPP_unweighted'].values>0))[0][0]
+        xx=arange(growingseason_start,growingseason_start_nextyear)
+        plot_var_PFTs('MR',vegdata_PFTs_newparams.isel(time=xx),ecotype_num,cumulative=True,ax=ax2,modfactor=3600*24,units='gC/m2',minyear=yr,ls='--')
+        plot_var_PFTs('FROOT_MR',vegdata_PFTs_newparams.isel(time=xx),ecotype_num,cumulative=True,ax=ax2,modfactor=3600*24,units='gC/m2',minyear=yr,ls=':')
+        plot_var_PFTs('GPP',vegdata_PFTs_newparams.isel(time=xx),ecotype_num,cumulative=True,ax=ax2,modfactor=3600*24,units='gC/m2')
+    xlim(startyear,endyear)
+
+    tight_layout()
+
+
+    show()
