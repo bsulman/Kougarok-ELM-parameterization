@@ -229,9 +229,12 @@ if __name__=='__main__':
     outputdata_dir='/nfs/data/ccsi/b0u/Kougarok/userpft'
 
     #vegdata_PFTs_oldparams=read_pftfile(outputdata_dir+'/accelspinup/ELMuserpft_adspinuptest_Kougarok_ICB1850CNPRDCTCBC.h1.nc')
-    vegdata_PFTs_oldparams=read_pftfile(outputdata_dir+'/accelspinup/ELMuserpft_adspinuptest_newparams_Kougarok_ICB1850CNPRDCTCBC.h1.nc',maxyear=150)
+    #vegdata_PFTs_oldparams=read_pftfile(outputdata_dir+'/accelspinup/ELMuserpft_adspinuptest_newparams_Kougarok_ICB1850CNPRDCTCBC.h1.nc',maxyear=150)
     #vegdata_PFTs_newparams=read_pftfile(outputdata_dir+'/accelspinup/ELMuserpft_adspinuptest_newparams_Kougarok_ICB1850CNPRDCTCBC.h1_20190220.nc',maxyear=150)
-    vegdata_PFTs_newparams=read_pftfile(outputdata_dir+'/accelspinup/ELMuserpft_adspinuptest_newparams_Kougarok_ICB1850CNPRDCTCBC.h1_fcur_20190221.nc',maxyear=150)
+    vegdata_PFTs_oldparams=read_pftfile(outputdata_dir+'/accelspinup/ELMuserpft_adspinuptest_newparams_Kougarok_ICB1850CNPRDCTCBC.h1_fcur_20190221.nc',maxyear=150)
+    #vegdata_PFTs_newparams=read_pftfile(outputdata_dir+'/accelspinup/ELMuserpft_adspinuptest_newparams_Kougarok_ICB1850CNPRDCTCBC.h1_fcur_eg-gram_rhizomefr.nc',maxyear=150)
+    #vegdata_PFTs_newparams=read_pftfile(outputdata_dir+'/accelspinup/ELMuserpft_adspinuptest_newparams_Kougarok_ICB1850CNPRDCTCBC.h1_fcur_eg-gram_rhizomefr_leaf-fr-long.nc',maxyear=150)
+    vegdata_PFTs_newparams=read_pftfile(outputdata_dir+'/accelspinup/ELMuserpft_adspinuptest_newparams_Kougarok_ICB1850CNPRDCTCBC.h1_2019-02-25.nc')
     #data=xarray.open_dataset(outputdata_dir+'/hist/ELMuserpft_Kougarok_ICB20TRCNPRDCTCBC.clm2.h.nc')
     #data_default=xarray.open_dataset(outputdata_dir+'/hist/ELMuserpft_Kougarok_ICB20TRCNPRDCTCBC_defaultparams.clm2.h.nc')
 
@@ -421,5 +424,21 @@ if __name__=='__main__':
 
         tight_layout(rect=(0.03,0.0,1.0,0.95))
     
+
+
+    figure('Temperature and root respiration');clf()
+    Tsoil10cm=xarray.open_dataset('/nfs/data/ccsi/b0u/Kougarok/userpft/accelspinup/ELMuserpft_Kougarok_ICB1850CNPRDCTCBC_clm2_h_20190129.nc',autoclose=True)['TSOI_10CM']
+    t2=array([tt.year + (tt.month-.5)/12 for tt in Tsoil10cm.time.data])
+    plot(t2,Tsoil10cm.isel(lndgrid=1)-273.15,'b-')
+    plot([0,maxyear],[0.0,0.0],'k--')
+    ylabel('Soil temperature (C)')
+
+    ax2=twinx()
+    plot_var_PFTs('LEAF_MR',vegdata_PFTs_newparams,1,cumulative=False,ax=ax2,modfactor=3600*24,units='gC/m2/day')
+    plot_var_PFTs('FROOT_MR',vegdata_PFTs_newparams,1,cumulative=False,ax=ax2,modfactor=3600*24,units='gC/m2/day')
+    xlim(10,20)
+
+    tight_layout()
+
     show()
 

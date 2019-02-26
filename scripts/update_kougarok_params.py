@@ -43,6 +43,7 @@ if __name__=='__main__':
     obs_leafCN = Koug_meas_chem['LeafC_percent']/Koug_meas_chem['LeafN_percent']
     obs_stemCN = Koug_meas_chem['StemC_percent']/Koug_meas_chem['StemN_percent']
     obs_frootCN = 54.6/1.3 # Obs uses a single value for fine roots
+    obs_rhizomeCN = Koug_meas_chem['RhizomeC_percent']/Koug_meas_chem['RhizomeN_percent']
     # Measured tissue C:N ratios are in weight units, and model expects gC/gN so they should be comparable.
 
 
@@ -67,15 +68,18 @@ if __name__=='__main__':
     printnote('Setting froot_leaf for evergreen species to include rhizomes, and weighting root turnover by rhizome biomass and turnover rates')
     # Dwarf evergreen shrub rhizome turnover time of 5 years from Table 5 in Verity's data description
     rhizome_leaf_NAMC=meas_rhizome_C['NAMC']['dwarf shrub evergreen']/meas_leaf_C['NAMC']['dwarf shrub evergreen']
-    change_param('froot_leaf',pft,froot_leaf_NAMC/1.5 + rhizome_leaf_NAMC/20.0  )
-    change_param('froot_long',pft,(1.5*froot_leaf_NAMC + 20.0*rhizome_leaf_NAMC)/(froot_leaf_NAMC+rhizome_leaf_NAMC)) # Longevity estimated from Verity's data description Table 3
+    dwarf_e_shrub_frootlong=(1.5*froot_leaf_NAMC + 20.0*rhizome_leaf_NAMC)/(froot_leaf_NAMC+rhizome_leaf_NAMC)
+    change_param('froot_long',pft,dwarf_e_shrub_frootlong) # Longevity estimated from Verity's data description Table 3
+    dwarf_e_shrub_frootleaf_factor=1.0
+    change_param('froot_leaf',pft,(froot_leaf_NAMC + rhizome_leaf_NAMC)/dwarf_e_shrub_frootlong*dwarf_e_shrub_frootleaf_factor  )
     change_param('fcur',pft,fcur_evergreen)
 
     # SLA in Verity's data is in cm2/g. Parameter in model is in m2/g. Divide obs by 100**2 to convert units
     change_param('slatop',pft,Koug_meas_chem['LeafSLA_cm2perg'][:,'dwarf shrub evergreen'].mean()/100**2)
     change_param('leafcn',pft,obs_leafCN[:,'dwarf shrub evergreen'].mean())
-    change_param('frootcn',pft,obs_frootCN)
+    change_param('frootcn',pft,(obs_frootCN*froot_leaf_NAMC + obs_rhizomeCN[:,'dwarf shrub evergreen'].mean()*rhizome_leaf_NAMC)/(froot_leaf_NAMC+rhizome_leaf_NAMC))
 
+    change_param('leaf_long',pft,(Koug_meas_biomass['LeafBiomass_gperm2']/Koug_meas_biomass['LeafNPP_gperm2peryr'])[:,'dwarf shrub evergreen'].mean() )
 
     printnote('Model divides stems into "dead" (heartwood) and live components with different C:N ratios. How to compare with measurements?')
 
@@ -146,8 +150,10 @@ if __name__=='__main__':
     printnote('Using same parameter values for wet and dry graminoids')
     printnote('Calculating rhizome lifetime from NPP and biomass (assuming steady state)')
     rhizome_lifetime = (meas_rhizome_C/meas_rhizome_NPP)['TT','graminoid']
-    change_param('froot_leaf',pftdry,0.5*(froot_leaf_TT+froot_leaf_TTWBT)/3.13 + 0.5*(rhizome_leaf_TT+rhizome_leaf_TTWBT)/rhizome_lifetime)
-    change_param('froot_leaf',pftwet,0.5*(froot_leaf_TT+froot_leaf_TTWBT)/3.13 + 0.5*(rhizome_leaf_TT+rhizome_leaf_TTWBT)/rhizome_lifetime)
+    froot_leaf_gram=0.5*(froot_leaf_TT+froot_leaf_TTWBT)/3.13 + 0.5*(rhizome_leaf_TT+rhizome_leaf_TTWBT)/rhizome_lifetime
+    froot_leaf_gram=froot_leaf_gram*1.5
+    change_param('froot_leaf',pftdry,froot_leaf_gram)
+    change_param('froot_leaf',pftwet,froot_leaf_gram)
 
     printnote('Graminoid SLA is much higher in WBT than other sites. What to do about that?')
     change_param('slatop',pftwet,Koug_meas_chem['LeafSLA_cm2perg'][:,'graminoid'].mean()/100**2)
