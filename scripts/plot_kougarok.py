@@ -427,7 +427,7 @@ if __name__=='__main__':
 
 
     figure('Temperature and root respiration');clf()
-    Tsoil10cm=xarray.open_dataset(outputdata_dir+'/ELMuserpft_Kougarok_ICB1850CNPRDCTCBC_clm2_h_20190129.nc',autoclose=True)['TSOI_10CM']
+    Tsoil10cm=xarray.open_dataset(outputdata_dir+'/accelspinup/ELMuserpft_Kougarok_ICB1850CNPRDCTCBC_clm2_h_20190129.nc',autoclose=True)['TSOI_10CM']
     t2=array([tt.year + (tt.month-.5)/12 for tt in Tsoil10cm.time.data])
     plot(t2,Tsoil10cm.isel(lndgrid=1)-273.15,'b-')
     plot([0,maxyear],[0.0,0.0],'k--')
@@ -442,7 +442,7 @@ if __name__=='__main__':
 
 
     figure('Temperature and root respiration cumulative');clf()
-    Tsoil10cm=xarray.open_dataset(outputdata_dir+'/ELMuserpft_Kougarok_ICB1850CNPRDCTCBC_clm2_h_20190129.nc',autoclose=True)['TSOI_10CM']
+    Tsoil10cm=xarray.open_dataset(outputdata_dir+'/accelspinup/ELMuserpft_Kougarok_ICB1850CNPRDCTCBC_clm2_h_20190129.nc',autoclose=True)['TSOI_10CM']
     t2=array([tt.year + (tt.month-.5)/12 for tt in Tsoil10cm.time.data])
     plot(t2,Tsoil10cm.isel(lndgrid=1)-273.15,'b-')
     plot([0,maxyear],[0.0,0.0],'k--')
