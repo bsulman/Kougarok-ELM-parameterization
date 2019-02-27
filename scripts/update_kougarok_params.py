@@ -194,6 +194,16 @@ if __name__=='__main__':
  
     change_param('fcur',pft,fcur_deciduous)
 
+
+    # Set up params for new dormant maintenance respiration
+    dormant_mr_temp=273.15-2.5
+    dormant_mr_factor=5e-2
+    printnote('Setting dormancy temperature to {0:1.1f} C'.format(dormant_mr_temp-273.15))
+    printnote('Setting dormancy maintenance resp factor to {0:1.1g}'.format(dormant_mr_factor))
+    params['dormant_mr_temp']=xarray.DataArray(name='dormant_mr_temp',dims='allpfts',data=[dormant_mr_temp],attrs={'units':'degrees K','long_name':'Maximum temperature for dormant maintenance respiration'})
+    params['dormant_mr_factor']=xarray.DataArray(name='dormant_mr_factor',dims='allpfts',data=[dormant_mr_factor],attrs={'units':'unitless','long_name':'Dormant maintenance respiration multiplication factor'})
+
+
     print('Saving params file to clm_params_updated.nc')
     params.to_netcdf('clm_params_updated.nc')
     
