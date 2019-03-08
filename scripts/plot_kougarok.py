@@ -207,13 +207,14 @@ def plot_var_PFTs(varname,moddata,ecotype_num,ax=None,obsdata=None,minyear=0,max
 
 
 
-    return dat 
+    return dat
 
 
 def save_all_figs(dirname='Figures',format='png',**kwargs):
     for fname in get_figlabels():
-        print(fname)
-        figure(fname).savefig('{dirname:s}/{fname:s}.{format}'.format(dirname=dirname,format=format,fname=fname),**kwargs)
+        fname_fixed=fname.replace('/','-')
+        print(fname_fixed)
+        figure(fname_fixed).savefig('{dirname:s}/{fname:s}.{format}'.format(dirname=dirname,format=format,fname=fname_fixed),**kwargs)
 
 
 def pft_params(paramdata,paramnames):
@@ -226,15 +227,15 @@ def pft_params(paramdata,paramnames):
     return pandas.DataFrame(pdict).set_index('pftname') 
 
 if __name__=='__main__':
-    outputdata_dir='/nfs/data/ccsi/b0u/Kougarok/userpft'
+    outputdata_dir='../output_data'
 
-    #vegdata_PFTs_oldparams=read_pftfile(outputdata_dir+'/accelspinup/ELMuserpft_adspinuptest_Kougarok_ICB1850CNPRDCTCBC.h1.nc')
+    vegdata_PFTs_oldparams=read_pftfile(outputdata_dir+'/ELMuserpft_adspinuptest_Kougarok_ICB1850CNPRDCTCBC.h1.nc')
     #vegdata_PFTs_oldparams=read_pftfile(outputdata_dir+'/accelspinup/ELMuserpft_adspinuptest_newparams_Kougarok_ICB1850CNPRDCTCBC.h1.nc',maxyear=150)
     #vegdata_PFTs_newparams=read_pftfile(outputdata_dir+'/accelspinup/ELMuserpft_adspinuptest_newparams_Kougarok_ICB1850CNPRDCTCBC.h1_20190220.nc',maxyear=150)
-    vegdata_PFTs_oldparams=read_pftfile(outputdata_dir+'/accelspinup/ELMuserpft_adspinuptest_newparams_Kougarok_ICB1850CNPRDCTCBC.h1_fcur_20190221.nc',maxyear=150)
+    # vegdata_PFTs_oldparams=read_pftfile(outputdata_dir+'/ELMuserpft_adspinuptest_newparams_Kougarok_ICB1850CNPRDCTCBC.h1_fcur_20190221.nc',maxyear=150)
     #vegdata_PFTs_newparams=read_pftfile(outputdata_dir+'/accelspinup/ELMuserpft_adspinuptest_newparams_Kougarok_ICB1850CNPRDCTCBC.h1_fcur_eg-gram_rhizomefr.nc',maxyear=150)
     #vegdata_PFTs_newparams=read_pftfile(outputdata_dir+'/accelspinup/ELMuserpft_adspinuptest_newparams_Kougarok_ICB1850CNPRDCTCBC.h1_fcur_eg-gram_rhizomefr_leaf-fr-long.nc',maxyear=150)
-    vegdata_PFTs_newparams=read_pftfile(outputdata_dir+'/accelspinup/ELMuserpft_adspinuptest_newparams_Kougarok_ICB1850CNPRDCTCBC.h1_2019-02-25.nc')
+    vegdata_PFTs_newparams=read_pftfile(outputdata_dir+'/ELMuserpft_adspinuptest_newparams_Kougarok_ICB1850CNPRDCTCBC.h1_2019-02-25.nc')
     #data=xarray.open_dataset(outputdata_dir+'/hist/ELMuserpft_Kougarok_ICB20TRCNPRDCTCBC.clm2.h.nc')
     #data_default=xarray.open_dataset(outputdata_dir+'/hist/ELMuserpft_Kougarok_ICB20TRCNPRDCTCBC_defaultparams.clm2.h.nc')
 
