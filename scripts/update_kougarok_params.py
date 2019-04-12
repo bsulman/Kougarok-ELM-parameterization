@@ -78,7 +78,7 @@ if __name__=='__main__':
     # fcur_evergreen=1.0
     printnote('Setting fcur to one minus the rhizome fraction of total NPP')
     fcur_pfts = 1.0 - meas_rhizome_NPP/meas_tot_NPP
-
+    fcur_pfts[:]=0.5
 
     # evergreen dwarf shrub
     pft='arctic_evergreen_shrub_dwarf'
@@ -88,9 +88,10 @@ if __name__=='__main__':
     printnote('Treating rhizomes as ELM storage C and N pool, not as roots')
     printnote('Assuming a rhizome (storage) turnover of 5 years based on dwarf evergreen shrub value from Table 5')
     printnote('In the future, this should be a PFT-specific parameter')
-    change_universal_param('fstor2tran',1.0/5.0)
+    change_universal_param('fstor2tran',1.0/4.0)
 
     leaflong=(Koug_meas_biomass['LeafBiomass_gperm2']/Koug_meas_biomass['LeafNPP_gperm2peryr'])[:,'dwarf shrub evergreen'].mean()
+    leaflong=3.5
     change_param('leaf_long',pft,leaflong )
 
 
@@ -98,8 +99,10 @@ if __name__=='__main__':
     # rhizome_leaf_NAMC=meas_rhizome_C['NAMC']['dwarf shrub evergreen']/meas_leaf_C['NAMC']['dwarf shrub evergreen']
     # dwarf_e_shrub_frootlong=(1.5*froot_leaf_NAMC + 20.0*rhizome_leaf_NAMC)/(froot_leaf_NAMC+rhizome_leaf_NAMC)
     dwarf_e_shrub_frootlong=1.56 # Table 3 in Verity's metadata
+    dwarf_e_shrub_frootlong=2.0
     change_param('froot_long',pft,dwarf_e_shrub_frootlong) # Longevity estimated from Verity's data description Table 3
-    change_param('froot_leaf',pft,(froot_leaf_NAMC)*leaflong/dwarf_e_shrub_frootlong )
+    # change_param('froot_leaf',pft,(froot_leaf_NAMC)*leaflong/dwarf_e_shrub_frootlong )
+    change_param('froot_leaf',pft,5.0)
     # fcur will have to be calibrated so storage pool is consistent with measured rhizome biomass
     change_param('fcur',pft,fcur_pfts['NAMC','dwarf shrub evergreen'])
 
@@ -108,7 +111,8 @@ if __name__=='__main__':
     change_param('leafcn',pft,obs_leafCN[:,'dwarf shrub evergreen'].mean())
     # change_param('frootcn',pft,(obs_frootCN*froot_leaf_NAMC + obs_rhizomeCN[:,'dwarf shrub evergreen'].mean()*rhizome_leaf_NAMC)/(froot_leaf_NAMC+rhizome_leaf_NAMC))
     change_param('frootcn',pft,obs_frootCN)
-
+    change_param('croot_stem',pft,0.1)
+    change_param('stem_leaf',pft,0.1)
 
     printnote('Model divides stems into "dead" (heartwood) and live components with different C:N ratios. How to compare with measurements?')
 
@@ -217,6 +221,9 @@ if __name__=='__main__':
     change_param('leaf_long',pftwet,leaflong)
     change_param('leaf_long',pftdry,leaflong)
 
+    printnote('VCmax for graminoids seems too high with updated parameters. Reducing it by about 50%')
+    change_param('flnr',pftwet,0.075)
+    change_param('flnr',pftdry,0.075)
 
     # Forb
     # Probably not enough data to constrain roots (no site with high forb coverage). Make same as graminoids?
@@ -243,4 +250,5 @@ if __name__=='__main__':
     print('Saving params file to clm_params_updated.nc')
     params.to_netcdf('clm_params_updated.nc')
     
+
 
