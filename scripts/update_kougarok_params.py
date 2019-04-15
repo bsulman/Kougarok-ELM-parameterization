@@ -16,10 +16,20 @@ ecotype_names={'NAMC':'Non-acidic mountain complex',
 
 
 def change_param(paramname,pftname,newval):
+    if 'pft' not in params[paramname].coords:
+        raise RuntimeError('Parameter {param:s} does not have a PFT dimension. Try using change_universal_param instead'.format(param=paramname))
     print('** Changing parameter {paramname:s} for PFT {pftname:s} from {oldval:1.3g} to {newval:1.3g}'.format(
         oldval=params[paramname][pft_names.index(pftname)].values,
         newval=newval,paramname=paramname,pftname=pftname))
     params[paramname][pft_names.index(pftname)] = newval
+
+def change_universal_param(paramname,newval):
+    if 'pft' in params[paramname].coords:
+        raise RuntimeError('Parameter {param:s} has a PFT dimension. Are you sure you want to change all of them?'.format(param=paramname))
+    print('** Changing parameter {paramname:s} for ALL PFTS from {oldval:1.3g} to {newval:1.3g}'.format(
+        oldval=params[paramname].values[0],
+        newval=newval,paramname=paramname))
+    params[paramname] = newval
 
 def printnote(note):
     print('  *** Note: {note:s}'.format(note=note))
@@ -39,6 +49,9 @@ if __name__=='__main__':
     meas_root_C=(Koug_meas_biomass['FineRootBiomass_gperm2'][:,'mixed']*(Koug_meas_chem['FineRootC_percent']/100))[:,'mixed']
     meas_rhizome_C=(Koug_meas_biomass['RhizomeBiomass_gperm2']*Koug_meas_chem['RhizomeC_percent']/100)
     meas_rhizome_NPP=(Koug_meas_biomass['RhizomeNPP_gperm2peryr']*Koug_meas_chem['RhizomeC_percent']/100)
+    meas_leaf_NPP   =(Koug_meas_biomass['LeafNPP_gperm2peryr']*Koug_meas_chem['LeafC_percent']/100)
+    meas_stem_NPP   =(Koug_meas_biomass['StemNPP_gperm2peryr']*Koug_meas_chem['StemC_percent']/100)
+    meas_root_NPP   =(Koug_meas_biomass['FineRootNPP_gperm2peryr']*Koug_meas_chem['FineRootC_percent']/100)[:,'mixed']
 
     obs_leafCN = Koug_meas_chem['LeafC_percent']/Koug_meas_chem['LeafN_percent']
     obs_stemCN = Koug_meas_chem['StemC_percent']/Koug_meas_chem['StemN_percent']
@@ -58,28 +71,48 @@ if __name__=='__main__':
         print('{ecotype:s}: {pft:s} leaf frac {leafCfrac:1.2f}, froot_leaf = {froot_leaf:1.2f}'.format(leafCfrac=leafCfrac[ecotype][pft],ecotype=ecotype,pft=pft,froot_leaf=froot_leaf))
         return froot_leaf
 
-    fcur_deciduous=0.0
-    fcur_evergreen=1.0
+
+    meas_tot_NPP    = meas_rhizome_NPP+meas_leaf_NPP+meas_stem_NPP+meas_root_NPP*leafCfrac
+
+    # fcur_deciduous=0.0
+    # fcur_evergreen=1.0
+    printnote('Setting fcur to one minus the rhizome fraction of total NPP')
+    fcur_pfts = 1.0 - meas_rhizome_NPP/meas_tot_NPP
+    fcur_pfts[:]=0.5
 
     # evergreen dwarf shrub
     pft='arctic_evergreen_shrub_dwarf'
     froot_leaf_TT=froot_leaf('TT','dwarf shrub evergreen')
     froot_leaf_NAMC=froot_leaf('NAMC','dwarf shrub evergreen')
-    printnote('Setting froot_leaf for evergreen species to include rhizomes, and weighting root turnover by rhizome biomass and turnover rates')
+    # printnote('Setting froot_leaf for evergreen species to include rhizomes, and weighting root turnover by rhizome biomass and turnover rates')
+    printnote('Treating rhizomes as ELM storage C and N pool, not as roots')
+    printnote('Assuming a rhizome (storage) turnover of 5 years based on dwarf evergreen shrub value from Table 5')
+    printnote('In the future, this should be a PFT-specific parameter')
+    change_universal_param('fstor2tran',1.0/4.0)
+
+    leaflong=(Koug_meas_biomass['LeafBiomass_gperm2']/Koug_meas_biomass['LeafNPP_gperm2peryr'])[:,'dwarf shrub evergreen'].mean()
+    leaflong=3.5
+    change_param('leaf_long',pft,leaflong )
+
+
     # Dwarf evergreen shrub rhizome turnover time of 5 years from Table 5 in Verity's data description
-    rhizome_leaf_NAMC=meas_rhizome_C['NAMC']['dwarf shrub evergreen']/meas_leaf_C['NAMC']['dwarf shrub evergreen']
-    dwarf_e_shrub_frootlong=(1.5*froot_leaf_NAMC + 20.0*rhizome_leaf_NAMC)/(froot_leaf_NAMC+rhizome_leaf_NAMC)
+    # rhizome_leaf_NAMC=meas_rhizome_C['NAMC']['dwarf shrub evergreen']/meas_leaf_C['NAMC']['dwarf shrub evergreen']
+    # dwarf_e_shrub_frootlong=(1.5*froot_leaf_NAMC + 20.0*rhizome_leaf_NAMC)/(froot_leaf_NAMC+rhizome_leaf_NAMC)
+    dwarf_e_shrub_frootlong=1.56 # Table 3 in Verity's metadata
+    dwarf_e_shrub_frootlong=2.0
     change_param('froot_long',pft,dwarf_e_shrub_frootlong) # Longevity estimated from Verity's data description Table 3
-    dwarf_e_shrub_frootleaf_factor=1.0
-    change_param('froot_leaf',pft,(froot_leaf_NAMC + rhizome_leaf_NAMC)/dwarf_e_shrub_frootlong*dwarf_e_shrub_frootleaf_factor  )
-    change_param('fcur',pft,fcur_evergreen)
+    # change_param('froot_leaf',pft,(froot_leaf_NAMC)*leaflong/dwarf_e_shrub_frootlong )
+    change_param('froot_leaf',pft,5.0)
+    # fcur will have to be calibrated so storage pool is consistent with measured rhizome biomass
+    change_param('fcur',pft,fcur_pfts['NAMC','dwarf shrub evergreen'])
 
     # SLA in Verity's data is in cm2/g. Parameter in model is in m2/g. Divide obs by 100**2 to convert units
     change_param('slatop',pft,Koug_meas_chem['LeafSLA_cm2perg'][:,'dwarf shrub evergreen'].mean()/100**2)
     change_param('leafcn',pft,obs_leafCN[:,'dwarf shrub evergreen'].mean())
-    change_param('frootcn',pft,(obs_frootCN*froot_leaf_NAMC + obs_rhizomeCN[:,'dwarf shrub evergreen'].mean()*rhizome_leaf_NAMC)/(froot_leaf_NAMC+rhizome_leaf_NAMC))
-
-    change_param('leaf_long',pft,(Koug_meas_biomass['LeafBiomass_gperm2']/Koug_meas_biomass['LeafNPP_gperm2peryr'])[:,'dwarf shrub evergreen'].mean() )
+    # change_param('frootcn',pft,(obs_frootCN*froot_leaf_NAMC + obs_rhizomeCN[:,'dwarf shrub evergreen'].mean()*rhizome_leaf_NAMC)/(froot_leaf_NAMC+rhizome_leaf_NAMC))
+    change_param('frootcn',pft,obs_frootCN)
+    change_param('croot_stem',pft,0.1)
+    change_param('stem_leaf',pft,0.1)
 
     printnote('Model divides stems into "dead" (heartwood) and live components with different C:N ratios. How to compare with measurements?')
 
@@ -94,7 +127,7 @@ if __name__=='__main__':
     change_param('slatop',pft,Koug_meas_chem['LeafSLA_cm2perg'][:,'dwarf shrub deciduous'].mean()/100**2)
     change_param('leafcn',pft,obs_leafCN[:,'dwarf shrub deciduous'].mean())
     change_param('frootcn',pft,obs_frootCN)
-    change_param('fcur',pft,fcur_deciduous)
+    change_param('fcur',pft,fcur_pfts['DSLT','dwarf shrub deciduous'])
 
     # Tall non-alder shrub
     pft='arctic_deciduous_shrub_tall'
@@ -108,7 +141,7 @@ if __name__=='__main__':
     printnote('Deciduous shrub measured C:N varies a lot, from 11 to 31. Mean is 22.')
     change_param('leafcn',pft,obs_leafCN.loc[:,['tall shrub deciduous birch','tall shrub deciduous willow']].mean())
     change_param('frootcn',pft,obs_frootCN)
-    change_param('fcur',pft,fcur_deciduous)
+    change_param('fcur',pft,fcur_pfts[:,'tall shrub deciduous willow'].mean())
     
     
     # Low deciduous shrub
@@ -121,7 +154,7 @@ if __name__=='__main__':
     change_param('slatop',pft,Koug_meas_chem['LeafSLA_cm2perg'][:,'low shrub deciduous'].mean()/100**2)
     change_param('leafcn',pft,obs_leafCN[:,'low shrub deciduous'].mean())
     change_param('frootcn',pft,obs_frootCN)
-    change_param('fcur',pft,fcur_deciduous)
+    change_param('fcur',pft,fcur_pfts[:,'low shrub deciduous'].mean() )
 
     
     # Alder
@@ -133,7 +166,7 @@ if __name__=='__main__':
     change_param('slatop',pft,Koug_meas_chem['LeafSLA_cm2perg'][:,'tall shrub deciduous alder'].mean()/100**2)
     change_param('leafcn',pft,obs_leafCN[:,'tall shrub deciduous alder'].mean())
     change_param('frootcn',pft,obs_frootCN)
-    change_param('fcur',pft,fcur_deciduous)
+    change_param('fcur',pft,fcur_pfts[:,'tall shrub deciduous alder'].mean() )
 
 
     # Graminoid
@@ -142,18 +175,25 @@ if __name__=='__main__':
     froot_leaf_TT=froot_leaf('TT','graminoid')
     froot_leaf_TTWBT=froot_leaf('TTWBT','graminoid')
     froot_leaf_WBT=froot_leaf('WBT','graminoid')
-    rhizome_leaf_TT=meas_rhizome_C['TT']['graminoid']/meas_leaf_C['TT']['graminoid']
-    rhizome_leaf_TTWBT=meas_rhizome_C['TTWBT']['graminoid']/meas_leaf_C['TTWBT']['graminoid']
+    # rhizome_leaf_TT=meas_rhizome_C['TT']['graminoid']/meas_leaf_C['TT']['graminoid']
+    # rhizome_leaf_TTWBT=meas_rhizome_C['TTWBT']['graminoid']/meas_leaf_C['TTWBT']['graminoid']
 
     # Use mean of TT and TTWBT, which have more graminoids and similar values
     # Use same values for wet and dry graminoids in model for now
     printnote('Using same parameter values for wet and dry graminoids')
-    printnote('Calculating rhizome lifetime from NPP and biomass (assuming steady state)')
-    rhizome_lifetime = (meas_rhizome_C/meas_rhizome_NPP)['TT','graminoid']
-    froot_leaf_gram=0.5*(froot_leaf_TT+froot_leaf_TTWBT)/3.13 + 0.5*(rhizome_leaf_TT+rhizome_leaf_TTWBT)/rhizome_lifetime
-    froot_leaf_gram=froot_leaf_gram*1.5
-    change_param('froot_leaf',pftdry,froot_leaf_gram)
-    change_param('froot_leaf',pftwet,froot_leaf_gram)
+    # printnote('Calculating rhizome lifetime from NPP and biomass (assuming steady state)')
+    # rhizome_lifetime = (meas_rhizome_C/meas_rhizome_NPP)['TT','graminoid']
+    # froot_leaf_gram=0.5*(froot_leaf_TT+froot_leaf_TTWBT)/3.13 + 0.5*(rhizome_leaf_TT+rhizome_leaf_TTWBT)/rhizome_lifetime
+    # froot_leaf_gram=froot_leaf_gram*1.5
+    froot_leaf_gram = 0.5*froot_leaf_TT + 0.5*froot_leaf_TTWBT
+
+    # Numbers for root and leaf longevity
+    printnote('Assigning graminoid leaf longevity of 2 years based on 50% leaf replacement estimate from Shaver and Laundre 2003 GCB paper')
+    # Root longevity values from TT in Verity's data description Table 3
+    rootlong=3.13
+    leaflong=2.0
+    change_param('froot_leaf',pftdry,froot_leaf_gram*leaflong/rootlong)
+    change_param('froot_leaf',pftwet,froot_leaf_gram*leaflong/rootlong)
 
     printnote('Graminoid SLA is much higher in WBT than other sites. What to do about that?')
     change_param('slatop',pftwet,Koug_meas_chem['LeafSLA_cm2perg'][:,'graminoid'].mean()/100**2)
@@ -163,13 +203,14 @@ if __name__=='__main__':
     change_param('frootcn',pftdry,obs_frootCN)
     change_param('frootcn',pftwet,obs_frootCN)
 
-    # Values from TT in Verity's data description Table 3
-    frootfrac_graminoid=(froot_leaf_TT+froot_leaf_TTWBT)/(rhizome_leaf_TT+rhizome_leaf_TTWBT+froot_leaf_TT+froot_leaf_TTWBT)
-    change_param('froot_long',pftwet,3.13*frootfrac_graminoid + rhizome_lifetime*(1-frootfrac_graminoid))
-    change_param('froot_long',pftdry,3.13*frootfrac_graminoid + rhizome_lifetime*(1-frootfrac_graminoid))
+    #frootfrac_graminoid=(froot_leaf_TT+froot_leaf_TTWBT)/(rhizome_leaf_TT+rhizome_leaf_TTWBT+froot_leaf_TT+froot_leaf_TTWBT)
+    #change_param('froot_long',pftwet,3.13*frootfrac_graminoid + rhizome_lifetime*(1-frootfrac_graminoid))
+    #change_param('froot_long',pftdry,3.13*frootfrac_graminoid + rhizome_lifetime*(1-frootfrac_graminoid))
+    change_param('froot_long',pftwet,rootlong)
+    change_param('froot_long',pftdry,rootlong)
 
-    change_param('fcur',pftwet,fcur_evergreen)
-    change_param('fcur',pftdry,fcur_evergreen)
+    change_param('fcur',pftwet,fcur_pfts[:,'graminoid'].mean() )
+    change_param('fcur',pftdry,fcur_pfts[:,'graminoid'].mean() )
 
     printnote('According to Verity, grasses act more like evergreen plants. Do not drop leaves/roots every year')
     change_param('season_decid',pftwet,0)
@@ -177,10 +218,12 @@ if __name__=='__main__':
     change_param('evergreen',pftwet,1)
     change_param('evergreen',pftdry,1)
 
-    printnote('Assigning graminoid leaf longevity of 2 years based on 50% leaf replacement estimate from Shaver and Laundre 2003 GCB paper')
-    change_param('leaf_long',pftwet,2.0)
-    change_param('leaf_long',pftdry,2.0)
+    change_param('leaf_long',pftwet,leaflong)
+    change_param('leaf_long',pftdry,leaflong)
 
+    printnote('VCmax for graminoids seems too high with updated parameters. Reducing it by about 50%')
+    change_param('flnr',pftwet,0.075)
+    change_param('flnr',pftdry,0.075)
 
     # Forb
     # Probably not enough data to constrain roots (no site with high forb coverage). Make same as graminoids?
@@ -192,9 +235,20 @@ if __name__=='__main__':
     change_param('leafcn',pft,obs_leafCN[:,'forb'].mean())
     change_param('frootcn',pft,obs_frootCN)
  
-    change_param('fcur',pft,fcur_deciduous)
+    change_param('fcur',pft,fcur_pfts[:,'forb'].mean())
+
+
+    # Set up params for new dormant maintenance respiration
+    dormant_mr_temp=273.15+2.5
+    dormant_mr_factor=5e-2
+    printnote('Setting dormancy temperature to {0:1.1f} C'.format(dormant_mr_temp-273.15))
+    printnote('Setting dormancy maintenance resp factor to {0:1.1g}'.format(dormant_mr_factor))
+    params['dormant_mr_temp']=xarray.DataArray(name='dormant_mr_temp',dims='allpfts',data=[dormant_mr_temp],attrs={'units':'degrees K','long_name':'Maximum temperature for dormant maintenance respiration'})
+    params['dormant_mr_factor']=xarray.DataArray(name='dormant_mr_factor',dims='allpfts',data=[dormant_mr_factor],attrs={'units':'unitless','long_name':'Dormant maintenance respiration multiplication factor'})
+
 
     print('Saving params file to clm_params_updated.nc')
     params.to_netcdf('clm_params_updated.nc')
     
+
 
