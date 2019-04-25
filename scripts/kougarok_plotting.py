@@ -18,15 +18,23 @@ pft_names_default=[name.strip() for name in params_default['pftname'].values.ast
 
 
 # domaindata=xarray.open_dataset('/lustre/or-hydra/cades-ccsi/proj-shared/project_acme/cesminput_ngee/share/domains/domain.clm/domain.lnd.51x63pt_kougarok-NGEE_TransA_navy.nc')
-surfdata=xarray.open_dataset(basedir+'/param_files/surfdata_51x63pt_kougarok-NGEE_TransA_simyr1850_c181115-sub12.nc')
+# surfdata=xarray.open_dataset(basedir+'/param_files/surfdata_51x63pt_kougarok-NGEE_TransA_simyr1850_c181115-sub12.nc')
+surfdata=xarray.open_dataset(basedir+'/param_files/surfdata_51x63pt_kougarok-NGEE_TransA_simyr1850_c181115-sub12_updated_2019-02-15.nc')
 surfdata_default=xarray.open_dataset(basedir+'/param_files/surfdata_51x63pt_kougarok-NGEE_TransA_simyr1850_c181115default.nc')
 
-landscape_ecotypes=['NAMC','DSLT','AS','WBT','TTWBT','TT']
-ecotype_names={'NAMC':'Non-acidic mountain complex',
+# landscape_ecotypes=['NAMC','DSLT','AS','WBT','TTWBT','TT']
+# ecotype_names={'NAMC':'Non-acidic mountain complex',
+#                'DSLT':'Dwarf shrub lichen tundra',
+#                'AS'  :'Alder shrubland',
+#                'WBT' :'Willow birch tundra',
+#                'TTWBT':'Tussock tundra/willow birch tundra',
+#                'TT'  :'Tussock tundra'}
+landscape_ecotypes=['DL','DSLT','AS','WBT','ASV','TT']
+ecotype_names={'DL':'Dryas-lichen dwarf shrub tundra',
                'DSLT':'Dwarf shrub lichen tundra',
                'AS'  :'Alder shrubland',
                'WBT' :'Willow birch tundra',
-               'TTWBT':'Tussock tundra/willow birch tundra',
+               'ASV':'Alder savanna',
                'TT'  :'Tussock tundra'}
 
 pft_colors=['C%d'%n for n in range(10)] + ['k','purple']

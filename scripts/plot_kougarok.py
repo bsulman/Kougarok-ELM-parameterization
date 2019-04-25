@@ -2,19 +2,27 @@ from kougarok_plotting import *
 
 
 if __name__=='__main__':
-    outputdata_dir='../output_data'
+    outputdata_dir='../../output_data'
 
     vegdata_PFTs_defaultparams=read_pftfile(outputdata_dir+'/ELMuserpft_defaultparams_adspinuptest_Kougarok_ICB1850CNPRDCTCBC.h1.nc',maxyear=150)
-    vegdata_PFTs_oldparams=read_pftfile(outputdata_dir+'/ELMuserpft_adspinuptest_Kougarok_ICB1850CNPRDCTCBC.h1.nc')
+    # vegdata_PFTs_oldparams=read_pftfile(outputdata_dir+'/ELMuserpft_adspinuptest_Kougarok_ICB1850CNPRDCTCBC.h1.nc')
     #vegdata_PFTs_oldparams=read_pftfile(outputdata_dir+'/accelspinup/ELMuserpft_adspinuptest_newparams_Kougarok_ICB1850CNPRDCTCBC.h1.nc',maxyear=150)
     #vegdata_PFTs_newparams=read_pftfile(outputdata_dir+'/accelspinup/ELMuserpft_adspinuptest_newparams_Kougarok_ICB1850CNPRDCTCBC.h1_20190220.nc',maxyear=150)
     # vegdata_PFTs_oldparams=read_pftfile(outputdata_dir+'/ELMuserpft_adspinuptest_newparams_Kougarok_ICB1850CNPRDCTCBC.h1_fcur_20190221.nc',maxyear=150)
     #vegdata_PFTs_newparams=read_pftfile(outputdata_dir+'/accelspinup/ELMuserpft_adspinuptest_newparams_Kougarok_ICB1850CNPRDCTCBC.h1_fcur_eg-gram_rhizomefr.nc',maxyear=150)
     #vegdata_PFTs_newparams=read_pftfile(outputdata_dir+'/accelspinup/ELMuserpft_adspinuptest_newparams_Kougarok_ICB1850CNPRDCTCBC.h1_fcur_eg-gram_rhizomefr_leaf-fr-long.nc',maxyear=150)
     # vegdata_PFTs_newparams=read_pftfile(outputdata_dir+'/ELMuserpft_adspinuptest_newparams_Kougarok_ICB1850CNPRDCTCBC.h1_2019-02-25.nc')
-    vegdata_PFTs_newparams=read_pftfile(outputdata_dir+'/ELMuserpft_adspinuptest_noPlim_newparams.h1_20190308.nc',maxyear=150)
+    # vegdata_PFTs_newparams=read_pftfile(outputdata_dir+'/ELMuserpft_adspinuptest_noPlim_newparams.h1_20190308.nc',maxyear=150)
     #data=xarray.open_dataset(outputdata_dir+'/hist/ELMuserpft_Kougarok_ICB20TRCNPRDCTCBC.clm2.h.nc')
     #data_default=xarray.open_dataset(outputdata_dir+'/hist/ELMuserpft_Kougarok_ICB20TRCNPRDCTCBC_defaultparams.clm2.h.nc')
+    # vegdata_PFTs_newparams=read_pftfile(outputdata_dir+'/ELMuserpft_adspinuptest_rhizomes-as-storage.h1_20190415.nc',maxyear=150)
+    vegdata_PFTs_oldparams=read_pftfile(outputdata_dir+'/ELMuserpft_adspinuptest_rhizomes-as-storage_Conly100y.h1_20190416.nc',maxyear=150)
+    vegdata_PFTs_newparams=read_pftfile(outputdata_dir+'/ELMuserpft_Kougarok_rhizomes-as-storage_h1_20190418.nc',maxyear=400)
+    
+    # columndata_newparams=xarray.open_dataset(outputdata_dir+'/ELMuserpft_adspinuptest_rhizomes-as-storage.h0_20190415.nc',autoclose=True)
+    columndata_oldparams=xarray.open_dataset(outputdata_dir+'/ELMuserpft_adspinuptest_rhizomes-as-storage_Conly100y.h0_20190416.nc',autoclose=True)
+    columndata_newparams=xarray.open_dataset(outputdata_dir+'/ELMuserpft_Kougarok_rhizomes-as-storage_h0_20190418.nc',autoclose=True)
+    Tsoil10cm=columndata_newparams['TSOI_10CM']
 
     minyear=0
     maxyear=50
@@ -86,7 +94,7 @@ if __name__=='__main__':
 
     meas_froot_NPP =(Koug_meas_biomass['FineRootNPP_gperm2peryr']*Koug_meas_chem['FineRootC_percent']/100).groupby('Ecotype').sum()
 
-    plotvars=['leaf','froot','croot','stem','store','npp','cnpp','height']
+    plotvars=['leaf','froot','croot','stem','store','npp','cnpp','height','downreg']
     nplots=len(plotvars)
     for econum in range(len(landscape_ecotypes)):
         fig=figure(ecotype_names[landscape_ecotypes[econum]],figsize=(15,5))
@@ -106,8 +114,8 @@ if __name__=='__main__':
         plot_var_PFTs('FROOTC',vegdata_PFTs_oldparams,obsdata=meas_root_C,plotsum=True,ecotype_num=econum,ax=subplot_handles['froot_old'])
         plot_var_PFTs('FROOTC',vegdata_PFTs_newparams,obsdata=meas_root_C,plotsum=True,ecotype_num=econum,ax=subplot_handles['froot_new'])
 
-        plot_var_PFTs(['LIVECROOTC','DEADCROOTC'],vegdata_PFTs_oldparams,longname='C Root & rhizome',obsdata=meas_rhizome_C,plotsum=True,ecotype_num=econum,ax=subplot_handles['croot_old'])
-        plot_var_PFTs(['LIVECROOTC','DEADCROOTC'],vegdata_PFTs_newparams,longname='C Root & rhizome',obsdata=meas_rhizome_C,plotsum=True,ecotype_num=econum,ax=subplot_handles['croot_new'])
+        plot_var_PFTs(['LIVECROOTC','DEADCROOTC'],vegdata_PFTs_oldparams,longname='C Root',plotsum=True,ecotype_num=econum,ax=subplot_handles['croot_old'])
+        plot_var_PFTs(['LIVECROOTC','DEADCROOTC'],vegdata_PFTs_newparams,longname='C Root',plotsum=True,ecotype_num=econum,ax=subplot_handles['croot_new'])
 
         plot_var_PFTs(['LIVESTEMC','DEADSTEMC'],vegdata_PFTs_oldparams,obsdata=meas_stem_C,longname='Stem C',ecotype_num=econum,ax=subplot_handles['stem_old'])
         plot_var_PFTs(['LIVESTEMC','DEADSTEMC'],vegdata_PFTs_newparams,obsdata=meas_stem_C,longname='Stem C',ecotype_num=econum,ax=subplot_handles['stem_new'])
@@ -127,8 +135,8 @@ if __name__=='__main__':
         plot_var_PFTs('HTOP',vegdata_PFTs_oldparams,weight_area=False,ecotype_num=econum,ax=subplot_handles['height_old'])
         plot_var_PFTs('HTOP',vegdata_PFTs_newparams,weight_area=False,ecotype_num=econum,ax=subplot_handles['height_new'])
 
-        plot_var_PFTs('STORVEGC',vegdata_PFTs_oldparams,ecotype_num=econum,longname='Stored C',ax=subplot_handles['store_old'])
-        plot_var_PFTs('STORVEGC',vegdata_PFTs_newparams,ecotype_num=econum,longname='Stored C',ax=subplot_handles['store_new'])
+        plot_var_PFTs('STORVEGC',vegdata_PFTs_oldparams,ecotype_num=econum,longname='Stored C',obsdata=meas_rhizome_C,ax=subplot_handles['store_old'])
+        plot_var_PFTs('STORVEGC',vegdata_PFTs_newparams,ecotype_num=econum,longname='Stored C',obsdata=meas_rhizome_C,ax=subplot_handles['store_new'])
 
 
         subplot_handles['froot_old'].legend(loc=(-1,1.2),ncol=7,fontsize='small')
@@ -174,38 +182,37 @@ if __name__=='__main__':
     frootleafratio_newparams=xarray.Dataset({'froot_leaf_ratio_unweighted':vegdata_PFTs_newparams['FROOTC_unweighted']/vegdata_PFTs_newparams['LEAFC_unweighted']})
 
     froot_leaf_obs = meas_root_C/meas_leaf_C.sum(level='Ecotype')
-
-    nplots=2
-    for econum in range(len(landscape_ecotypes)):
-        fig=figure(ecotype_names[landscape_ecotypes[econum]]+' ratios',figsize=(8,5))
-        fig.clf()
-
-        frootleaf_old=subplot(2,nplots,1)
-        frootleaf_new=subplot(2,nplots,nplots+1)
-        stemleaf_old=subplot(2,nplots,2)
-        stemleaf_new=subplot(2,nplots,nplots+2)
-
-        plot_var_PFTs('stem_leaf_ratio',stemleafratio_oldparams,obsdata=meas_stem_C/meas_leaf_C,weight_area=False,longname='Stem to leaf ratio',units='gC/gC',ecotype_num=econum,ax=stemleaf_old)
-        plot_var_PFTs('stem_leaf_ratio',stemleafratio_newparams,obsdata=meas_stem_C/meas_leaf_C,weight_area=False,longname='Stem to leaf ratio',units='gC/gC',ecotype_num=econum,ax=stemleaf_new)
-        stemleaf_new.legend(fontsize='small',ncol=2)
-
-        plot_var_PFTs('froot_leaf_ratio',frootleafratio_oldparams,weight_area=False,longname='Froot to leaf ratio',units='gC/gC',ecotype_num=econum,ax=frootleaf_old)
-        plot_var_PFTs('froot_leaf_ratio',frootleafratio_newparams,weight_area=False,longname='Froot to leaf ratio',units='gC/gC',ecotype_num=econum,ax=frootleaf_new)
-        frootleaf_old.plot([minyear,maxyear],[froot_leaf_obs[landscape_ecotypes[econum]],froot_leaf_obs[landscape_ecotypes[econum]]],'--',c='C0')
-        frootleaf_new.plot([minyear,maxyear],[froot_leaf_obs[landscape_ecotypes[econum]],froot_leaf_obs[landscape_ecotypes[econum]]],'--',c='C0')
-
-        #froot_old.legend(loc=(-1,1.2),ncol=7,fontsize='small')
-
-        figtext(0.5,0.95,ecotype_names[landscape_ecotypes[econum]]+' ratios',ha='center',fontsize='large')
-        figtext(0.02,0.25,'Updated params',rotation=90,va='center',fontsize='large')
-        figtext(0.02,0.75,'Old params',rotation=90,va='center',fontsize='large')
-
-        tight_layout(rect=(0.03,0.0,1.0,0.95))
-
-
+    # 
+    # nplots=2
+    # for econum in range(len(landscape_ecotypes)):
+    #     fig=figure(ecotype_names[landscape_ecotypes[econum]]+' ratios',figsize=(8,5))
+    #     fig.clf()
+    # 
+    #     frootleaf_old=subplot(2,nplots,1)
+    #     frootleaf_new=subplot(2,nplots,nplots+1)
+    #     stemleaf_old=subplot(2,nplots,2)
+    #     stemleaf_new=subplot(2,nplots,nplots+2)
+    # 
+    #     plot_var_PFTs('stem_leaf_ratio',stemleafratio_oldparams,obsdata=meas_stem_C/meas_leaf_C,weight_area=False,longname='Stem to leaf ratio',units='gC/gC',ecotype_num=econum,ax=stemleaf_old)
+    #     plot_var_PFTs('stem_leaf_ratio',stemleafratio_newparams,obsdata=meas_stem_C/meas_leaf_C,weight_area=False,longname='Stem to leaf ratio',units='gC/gC',ecotype_num=econum,ax=stemleaf_new)
+    #     stemleaf_new.legend(fontsize='small',ncol=2)
+    # 
+    #     plot_var_PFTs('froot_leaf_ratio',frootleafratio_oldparams,weight_area=False,longname='Froot to leaf ratio',units='gC/gC',ecotype_num=econum,ax=frootleaf_old)
+    #     plot_var_PFTs('froot_leaf_ratio',frootleafratio_newparams,weight_area=False,longname='Froot to leaf ratio',units='gC/gC',ecotype_num=econum,ax=frootleaf_new)
+    #     frootleaf_old.plot([minyear,maxyear],[froot_leaf_obs[landscape_ecotypes[econum]],froot_leaf_obs[landscape_ecotypes[econum]]],'--',c='C0')
+    #     frootleaf_new.plot([minyear,maxyear],[froot_leaf_obs[landscape_ecotypes[econum]],froot_leaf_obs[landscape_ecotypes[econum]]],'--',c='C0')
+    # 
+    #     #froot_old.legend(loc=(-1,1.2),ncol=7,fontsize='small')
+    # 
+    #     figtext(0.5,0.95,ecotype_names[landscape_ecotypes[econum]]+' ratios',ha='center',fontsize='large')
+    #     figtext(0.02,0.25,'Updated params',rotation=90,va='center',fontsize='large')
+    #     figtext(0.02,0.75,'Old params',rotation=90,va='center',fontsize='large')
+    # 
+    #     tight_layout(rect=(0.03,0.0,1.0,0.95))
+    # 
+    # 
 
     figure('Temperature and root respiration');clf()
-    Tsoil10cm=xarray.open_dataset(outputdata_dir+'/accelspinup/ELMuserpft_Kougarok_ICB1850CNPRDCTCBC_clm2_h_20190129.nc',autoclose=True)['TSOI_10CM']
     t2=array([tt.year + (tt.month-.5)/12 for tt in Tsoil10cm.time.data])
     plot(t2,Tsoil10cm.isel(lndgrid=1)-273.15,'b-')
     plot([0,maxyear],[0.0,0.0],'k--')
@@ -220,7 +227,7 @@ if __name__=='__main__':
 
 
     figure('Temperature and root respiration cumulative');clf()
-    Tsoil10cm=xarray.open_dataset(outputdata_dir+'/accelspinup/ELMuserpft_Kougarok_ICB1850CNPRDCTCBC_clm2_h_20190129.nc',autoclose=True)['TSOI_10CM']
+    # Tsoil10cm=xarray.open_dataset(outputdata_dir+'/ELMuserpft_Kougarok_ICB1850CNPRDCTCBC_clm2_h0_20190415.nc',autoclose=True)['TSOI_10CM']
     t2=array([tt.year + (tt.month-.5)/12 for tt in Tsoil10cm.time.data])
     plot(t2,Tsoil10cm.isel(lndgrid=1)-273.15,'b-')
     plot([0,maxyear],[0.0,0.0],'k--')
@@ -241,6 +248,39 @@ if __name__=='__main__':
     xlim(startyear,endyear)
 
     tight_layout()
-
+    
+    t_col=array([tt.year + (tt.dayofyr-1)/365 for tt in columndata_newparams['time'].data])
+    figure('Soil C and N');clf()
+    subplot(231)
+    plot(t_col,columndata_oldparams.TOTSOMC)
+    title('Soil C')
+    xlabel('Time (years)')
+    ylabel('{name:s} ({units:s})'.format(name=columndata_oldparams.TOTSOMC.long_name,units=columndata_oldparams.TOTSOMC.units))
+    subplot(232)
+    plot(t_col,columndata_oldparams.TOTSOMN)
+    title('Soil N')
+    xlabel('Time (years)')
+    ylabel('{name:s} ({units:s})'.format(name=columndata_oldparams.TOTSOMN.long_name,units=columndata_oldparams.TOTSOMN.units))
+    subplot(233)
+    plot(t_col,columndata_oldparams.TOTSOMP)
+    title('Soil P')
+    xlabel('Time (years)')
+    ylabel('{name:s} ({units:s})'.format(name=columndata_oldparams.TOTSOMP.long_name,units=columndata_oldparams.TOTSOMP.units))
+    subplot(234)
+    plot(t_col,columndata_newparams.TOTSOMC)
+    title('Soil C')
+    xlabel('Time (years)')
+    ylabel('{name:s} ({units:s})'.format(name=columndata_oldparams.TOTSOMC.long_name,units=columndata_oldparams.TOTSOMC.units))
+    subplot(235)
+    plot(t_col,columndata_newparams.TOTSOMN)
+    title('Soil N')
+    xlabel('Time (years)')
+    ylabel('{name:s} ({units:s})'.format(name=columndata_oldparams.TOTSOMN.long_name,units=columndata_oldparams.TOTSOMN.units))
+    subplot(236)
+    plot(t_col,columndata_newparams.TOTSOMP)
+    title('Soil P')
+    xlabel('Time (years)')
+    ylabel('{name:s} ({units:s})'.format(name=columndata_oldparams.TOTSOMP.long_name,units=columndata_oldparams.TOTSOMP.units))
+    tight_layout()
 
     show()

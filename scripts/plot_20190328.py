@@ -24,7 +24,7 @@ vegdata_PFTs_defaultparams=read_pftfile(outputdata_dir+'/ELMuserpft_defaultparam
 
 # vegdata_PFTs_oldparams=read_pftfile(outputdata_dir+'/ELMuserpft_adspinuptest_noPlim_newparams.h1_20190308.nc',maxyear=150)
 vegdata_PFTs_oldparams=read_pftfile(outputdata_dir+'/ELMuserpft_adspinuptest_rhizomes-as-storage.h1_20190409.nc')
-vegdata_PFTs_newparams=read_pftfile(outputdata_dir+'/ELMuserpft_adspinuptest_rhizomes-as-storage.h1_20190410.nc')
+vegdata_PFTs_newparams=read_pftfile(outputdata_dir+'/ELMuserpft_adspinuptest_rhizomes-as-storage.h1_20190415.nc')
 
 
 
@@ -91,7 +91,7 @@ froot_rhizome_leaf_obs = (meas_root_C+meas_rhizome_C.sum(level='Ecotype'))/meas_
 
 maxyear=150
 f=plot_pair('froot_leaf_ratio',frootleafratio_oldparams,frootleafratio_newparams,weight_area=False,longname='Froot to leaf ratio',units='gC/gC',obsdata=froot_leaf_obs,ecotype_num=ecotype_num,minyear=0,maxyear=maxyear)
-f.axes[1].set_ylim(-0.2,frootleafratio_newparams.isel(time=365*(maxyear-1))['froot_leaf_ratio_unweighted'].max()*1.1 )
+# f.axes[1].set_ylim(-0.2,frootleafratio_newparams.isel(time=365*(maxyear-1))['froot_leaf_ratio_unweighted'].max()*1.1 )
 # obsval=froot_rhizome_leaf_obs[landscape_ecotypes[ecotype_num]]['mixed']
 # f.axes[1].plot([1,maxyear],[obsval,obsval],'k--')
 
