@@ -102,7 +102,7 @@ if __name__=='__main__':
     dwarf_e_shrub_frootlong=2.0
     change_param('froot_long',pft,dwarf_e_shrub_frootlong) # Longevity estimated from Verity's data description Table 3
     # change_param('froot_leaf',pft,(froot_leaf_NAMC)*leaflong/dwarf_e_shrub_frootlong )
-    change_param('froot_leaf',pft,5.0)
+    change_param('froot_leaf',pft,3.0)
     # fcur will have to be calibrated so storage pool is consistent with measured rhizome biomass
     change_param('fcur',pft,fcur_pfts['NAMC','dwarf shrub evergreen'])
 
@@ -228,15 +228,16 @@ if __name__=='__main__':
     # Forb
     # Probably not enough data to constrain roots (no site with high forb coverage). Make same as graminoids?
     # Leaving it alone for now.
-    printnote('Not enough forb biomass at any site to estimate associated root biomass. Assume the ratio is the same as forbs?')
+    printnote('Not enough forb biomass at any site to estimate associated root biomass. Assume the ratio is the same as grasses?')
     printnote('No SLA measurements for forbs. Current forb value is {forbsla:1.2g}'.format(forbsla=params['slatop'].values[pft_names.index('arctic_forb')])) 
+    printnote('Should forbs be evergreen or deciduous?')
 
     pft='arctic_forb' 
     change_param('leafcn',pft,obs_leafCN[:,'forb'].mean())
     change_param('frootcn',pft,obs_frootCN)
  
     change_param('fcur',pft,fcur_pfts[:,'forb'].mean())
-
+    change_param('froot_leaf',pft,2.0)
 
     # Set up params for new dormant maintenance respiration
     dormant_mr_temp=273.15+2.5
