@@ -5,7 +5,10 @@ set -e
 # verbose (print commands)
 set -x
 
-modeltype="ELMuserpft_adspinup_rhizomes-as-storage"
+
+THIS_SCRIPT=`realpath -e $BASH_SOURCE`
+
+modeltype="ELMuserpft_soildepth_spinup"
 sitename="Kougarok"
 # For spinup:
 compset="ICB1850CNPRDCTCBC"
@@ -17,6 +20,12 @@ cd /home/b0u/models/E3SM/cime/scripts
 ./create_newcase --case /home/b0u/cases/${modeltype}_${sitename}_${compset} --res CLM_USRDAT --mach cades --compiler gnu --compset $compset --project ccsi --walltime 24:00:00
 
 cd /home/b0u/cases/${modeltype}_${sitename}_${compset}
+
+# Copy this script into the directory so there is a record of the version used to make the case
+cp $THIS_SCRIPT . 
+
+
+
 ./xmlchange SAVE_TIMING=FALSE,CLM_USRDAT_NAME=1x1pt_kougarok-NGEE,LND_DOMAIN_PATH=/lustre/or-hydra/cades-ccsi/proj-shared/project_acme/cesminput_ngee/share/domains/domain.clm,LND_DOMAIN_FILE=domain.lnd.51x63pt_kougarok-NGEE_TransA_navy.nc
 
 ./xmlchange NTASKS=6
@@ -34,7 +43,8 @@ cd /home/b0u/cases/${modeltype}_${sitename}_${compset}
 # Add things to nml file
 cat >> user_nl_clm << EOF
 !fsurdat = '/lustre/or-hydra/cades-ccsi/proj-shared/project_acme/cesminput_ngee/lnd/clm2/surfdata_map/surfdata_51x63pt_kougarok-NGEE_TransA_simyr1850_c181115-sub12.nc'
-fsurdat = '/home/b0u/Kougarok_param_edits/param_files/surfdata_51x63pt_kougarok-NGEE_TransA_simyr1850_c181115-sub12_updated_2019-02-15.nc'
+!fsurdat = '/home/b0u/Kougarok_param_edits/param_files/surfdata_51x63pt_kougarok-NGEE_TransA_simyr1850_c181115-sub12_updated_2019-02-15.nc'
+fsurdat = '/home/b0u/Kougarok_param_edits/param_files/surfdata_51x63pt_kougarok-NGEE_TransA_simyr1850_c190604-sub12_updated_2019-06-17.nc'
 !paramfile = '/lustre/or-hydra/cades-ccsi/proj-shared/project_acme/cesminput_ngee/lnd/clm2/paramdata/clm_params_c180524-sub12.nc'
 paramfile = '/home/b0u/cases/${modeltype}_${sitename}_${compset}/clm_params_updated.nc'
 !nyears_ad_carbon_only = 25
@@ -44,14 +54,18 @@ metdata_bypass = '/lustre/or-hydra/cades-ccsi/proj-shared/project_acme/cesminput
 aero_file = '/lustre/or-hydra/cades-ccsi/proj-shared/project_acme/ACME_inputdata/atm/cam/chem/trop_mozart_aero/aero/aerosoldep_monthly_1850_mean_1.9x2.5_c090803.nc'
 CO2_file = '/lustre/or-hydra/cades-ccsi/proj-shared/project_acme/ACME_inputdata/atm/datm7/CO2/fco2_datm_1765-2007_c100614.nc'
 
+! Include this line to use variable soil depths:
+use_var_soil_thick = .TRUE.
+
 ! History file controls
 hist_empty_htapes = .false. ! If true, turns off default history output (of everything at subgrid level. If false, first file is defaults (need to account for that in subsequent controls
 hist_fincl2 = 'LEAFC','FROOTC','WOODC','LIVECROOTC','TLAI','CPOOL','STORVEGC','STORVEGN','LEAFN','FROOTN','LIVECROOTN','LIVESTEMC','LIVESTEMN',
               'DEADCROOTC','DEADCROOTN','DEADSTEMC','DEADSTEMN','TOTVEGC','TOTVEGN','GPP','NPP','HTOP','AGNPP','BGNPP'
               'LEAF_MR','FROOT_MR','LIVESTEM_MR','LIVECROOT_MR','MR','VCMAX25TOP','GR','AVAILC','PLANT_CALLOC','EXCESS_CFLUX','XSMRPOOL_RECOVER','XSMRPOOL','CPOOL'
+              'LEAFC_XFER_TO_LEAFC','FROOTC_XFER_TO_FROOTC','DOWNREG','INIT_GPP','SMINN_TO_NPOOL','PLANT_PDEMAND','PLANT_NDEMAND','SMINP_TO_PLANT'
 hist_dov2xy = .true., .false. ! True means subgrid-level output, false means patch (PFT) level output
-hist_nhtfrq = 0, -24 ! Output frequency. 0 is monthly, -24 is daily, 1 is timestep
-hist_mfilt  = 365 365 ! History file writing frequency: number of points from hist_nhtfrq
+hist_nhtfrq = 0, 0 ! Output frequency. 0 is monthly, -24 is daily, 1 is timestep
+hist_mfilt  = 12 12 ! History file writing frequency: number of points from hist_nhtfrq
 hist_avgflag_pertape = 'A', 'A', 'A' ! A for averaging, I for instantaneous
 EOF
 
@@ -64,8 +78,6 @@ EOF
 ./xmlchange STOP_OPTION=nyear,REST_OPTION=nyear,REST_N=20
 ./xmlchange STOP_N=150
 
-# Copy this script into the directory so there is a record of the version used to make the case
-cp /home/b0u/cases/make_Kougarok_case.bash . 
 
 echo "Two more things to do by hand:"
 echo " 1. Comment out PFLOTRAN_INC and PFLOTRAN_LIB in env_mach_specific.xml"
