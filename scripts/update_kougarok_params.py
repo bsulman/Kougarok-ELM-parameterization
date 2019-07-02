@@ -13,7 +13,14 @@ ecotype_names={'NAMC':'Non-acidic mountain complex',
                 'TTWBT':'Tussock tundra/willow birch tundra',
                 'TT'  :'Tussock tundra'}
 
-
+def pft_params(paramdata,paramnames):
+    pftnames=[name.strip() for name in paramdata['pftname'].values.astype(str)]
+    if isinstance(paramnames,str):
+        paramnames=[paramnames]
+    pdict={'pftname':pftnames}
+    for name in paramnames:
+       pdict[name]=paramdata[name]
+    return pandas.DataFrame(pdict).set_index('pftname')
 
 def change_param(paramname,pftname,newval):
     if 'pft' not in params[paramname].coords:
@@ -55,7 +62,7 @@ if __name__=='__main__':
 
     obs_leafCN = Koug_meas_chem['LeafC_percent']/Koug_meas_chem['LeafN_percent']
     obs_stemCN = Koug_meas_chem['StemC_percent']/Koug_meas_chem['StemN_percent']
-    obs_frootCN = 54.6/1.3 # Obs uses a single value for fine roots
+    obs_frootCN = 58.0 # Mean of measured root C:N across Kougarok plots
     obs_rhizomeCN = Koug_meas_chem['RhizomeC_percent']/Koug_meas_chem['RhizomeN_percent']
     # Measured tissue C:N ratios are in weight units, and model expects gC/gN so they should be comparable.
 
@@ -122,7 +129,9 @@ if __name__=='__main__':
     froot_leaf_WBT=froot_leaf('WBT','dwarf shrub deciduous')
     # Setting this to total root:leaf ratio of DSLT which is mostly shrubs.
     printnote('Setting dwarf deciduous shrub root_leaf to total root:leaf ratio for DSLT, which is mostly shrubs')
-    change_param('froot_leaf',pft,meas_root_C['DSLT']/meas_leaf_C['DSLT'].sum()  )
+    # This should be adjusted to reflect longer lifetime of fine roots
+    change_param('froot_leaf',pft,meas_root_C['DSLT']/meas_leaf_C['DSLT'].sum()/dwarf_e_shrub_frootlong  )
+    change_param('froot_long',pft,dwarf_e_shrub_frootlong) # Not sure if this has any effect for deciduous species
 
     change_param('slatop',pft,Koug_meas_chem['LeafSLA_cm2perg'][:,'dwarf shrub deciduous'].mean()/100**2)
     change_param('leafcn',pft,obs_leafCN[:,'dwarf shrub deciduous'].mean())
@@ -149,7 +158,7 @@ if __name__=='__main__':
     #change_param('froot_leaf',pft,meas_root_C['DSLT']/meas_leaf_C['DSLT'].sum()  )
     printnote('Making froot_leaf for low shrubs intermediate between dwarf and tall values')
     change_param('froot_leaf',pft, 0.5*(params['froot_leaf'][pft_names.index('arctic_deciduous_shrub_dwarf')]+params['froot_leaf'][pft_names.index('arctic_deciduous_shrub_tall')]).values)
-
+    change_param('froot_long',pft,dwarf_e_shrub_frootlong)
 
     change_param('slatop',pft,Koug_meas_chem['LeafSLA_cm2perg'][:,'low shrub deciduous'].mean()/100**2)
     change_param('leafcn',pft,obs_leafCN[:,'low shrub deciduous'].mean())
@@ -200,8 +209,9 @@ if __name__=='__main__':
     change_param('slatop',pftdry,Koug_meas_chem['LeafSLA_cm2perg'][:,'graminoid'].mean()/100**2)
     change_param('leafcn',pftdry,obs_leafCN[:,'graminoid'].mean())
     change_param('leafcn',pftwet,obs_leafCN[:,'graminoid'].mean())
-    change_param('frootcn',pftdry,obs_frootCN)
-    change_param('frootcn',pftwet,obs_frootCN)
+    printnote('Setting graminoid root C:N based on updated Kougarok chemistry')
+    change_param('frootcn',pftdry,75.0)
+    change_param('frootcn',pftwet,75.0)
 
     #frootfrac_graminoid=(froot_leaf_TT+froot_leaf_TTWBT)/(rhizome_leaf_TT+rhizome_leaf_TTWBT+froot_leaf_TT+froot_leaf_TTWBT)
     #change_param('froot_long',pftwet,3.13*frootfrac_graminoid + rhizome_lifetime*(1-frootfrac_graminoid))
@@ -222,8 +232,8 @@ if __name__=='__main__':
     change_param('leaf_long',pftdry,leaflong)
 
     printnote('VCmax for graminoids seems too high with updated parameters. Reducing it by about 50%')
-    change_param('flnr',pftwet,0.075)
-    change_param('flnr',pftdry,0.075)
+    change_param('flnr',pftwet,0.09)
+    change_param('flnr',pftdry,0.09)
 
     # Forb
     # Probably not enough data to constrain roots (no site with high forb coverage). Make same as graminoids?

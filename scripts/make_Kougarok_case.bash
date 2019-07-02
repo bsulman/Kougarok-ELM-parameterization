@@ -8,7 +8,7 @@ set -x
 
 THIS_SCRIPT=`realpath -e $BASH_SOURCE`
 
-modeltype="ELMuserpft_soildepth_spinup"
+modeltype="ELMuserpft_soildepth_spinup2"
 sitename="Kougarok"
 # For spinup:
 compset="ICB1850CNPRDCTCBC"
@@ -32,7 +32,7 @@ cp $THIS_SCRIPT .
 ./xmlchange NTASKS_ESP=1
 
 # If doing cold start
-./xmlchange CLM_ACCELERATED_SPINUP=on,CLM_FORCE_COLDSTART=on
+# ./xmlchange CLM_ACCELERATED_SPINUP=on,CLM_FORCE_COLDSTART=on
 
 # comment out PFLOTRAN_INC and PFLOTRAN_LIB
 
@@ -62,7 +62,7 @@ hist_empty_htapes = .false. ! If true, turns off default history output (of ever
 hist_fincl2 = 'LEAFC','FROOTC','WOODC','LIVECROOTC','TLAI','CPOOL','STORVEGC','STORVEGN','LEAFN','FROOTN','LIVECROOTN','LIVESTEMC','LIVESTEMN',
               'DEADCROOTC','DEADCROOTN','DEADSTEMC','DEADSTEMN','TOTVEGC','TOTVEGN','GPP','NPP','HTOP','AGNPP','BGNPP'
               'LEAF_MR','FROOT_MR','LIVESTEM_MR','LIVECROOT_MR','MR','VCMAX25TOP','GR','AVAILC','PLANT_CALLOC','EXCESS_CFLUX','XSMRPOOL_RECOVER','XSMRPOOL','CPOOL'
-              'LEAFC_XFER_TO_LEAFC','FROOTC_XFER_TO_FROOTC','DOWNREG','INIT_GPP','SMINN_TO_NPOOL','PLANT_PDEMAND','PLANT_NDEMAND','SMINP_TO_PLANT'
+              'LEAFC_XFER_TO_LEAFC','FROOTC_XFER_TO_FROOTC','DOWNREG','INIT_GPP','SMINN_TO_NPOOL','PLANT_PDEMAND','PLANT_NDEMAND','SMINP_TO_PPOOL'
 hist_dov2xy = .true., .false. ! True means subgrid-level output, false means patch (PFT) level output
 hist_nhtfrq = 0, 0 ! Output frequency. 0 is monthly, -24 is daily, 1 is timestep
 hist_mfilt  = 12 12 ! History file writing frequency: number of points from hist_nhtfrq
@@ -76,7 +76,7 @@ EOF
 ./xmlchange CLM_BLDNML_OPTS="-bgc bgc -nutrient cnp -nutrient_comp_pathway rd  -soil_decomp ctc -methane -nitrif_denitrif  -maxpft 12"
 
 ./xmlchange STOP_OPTION=nyear,REST_OPTION=nyear,REST_N=20
-./xmlchange STOP_N=150
+./xmlchange STOP_N=300
 
 
 echo "Two more things to do by hand:"
