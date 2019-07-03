@@ -257,6 +257,12 @@ if __name__=='__main__':
     params['dormant_mr_temp']=xarray.DataArray(name='dormant_mr_temp',dims='allpfts',data=[dormant_mr_temp],attrs={'units':'degrees K','long_name':'Maximum temperature for dormant maintenance respiration'})
     params['dormant_mr_factor']=xarray.DataArray(name='dormant_mr_factor',dims='allpfts',data=[dormant_mr_factor],attrs={'units':'unitless','long_name':'Dormant maintenance respiration multiplication factor'})
 
+    # Set up N fixation params
+    from numpy import zeros
+    params['Nfix_NPP_c1']=xarray.DataArray(name='Nfix_NPP_c1',dims='pft',data=zeros(len(pft_names))+1.8,attrs={'units':'gN/m2/yr','long_name':'Pre-exponential factor in NPP-Nfix equation'})
+    params['Nfix_NPP_c2']=xarray.DataArray(name='Nfix_NPP_c2',dims='pft',data=zeros(len(pft_names))+0.003,attrs={'units':'gN/m2/yr','long_name':'Exponential factor in NPP-Nfix equation'})
+    change_param('Nfix_NPP_c1','arctic_deciduous_shrub_alder',3.6)
+    change_param('Nfix_NPP_c1','arctic_forb',2.5)
 
     print('Saving params file to clm_params_updated.nc')
     params.to_netcdf('clm_params_updated.nc')
