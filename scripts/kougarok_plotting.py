@@ -40,7 +40,7 @@ ecotype_names={'DL':'Dryas-lichen dwarf shrub tundra',
 pft_colors=['C%d'%n for n in range(10)] + ['k','purple']
 pft_colors_default=['C0' for n in range(len(pft_names_default))]
 pft_colors_default[pft_names_default.index('broadleaf_evergreen_shrub')]='C3'
-pft_colors_default[pft_names_default.index('broadleaf_deciduous_boreal_shrub')]='C9'
+pft_colors_default[pft_names_default.index('broadleaf_deciduous_boreal_shrub')]='C7'
 pft_colors_default[pft_names_default.index('c3_arctic_grass')]='k'
 
 PFT_percents=pandas.DataFrame(data=surfdata.PCT_NAT_PFT.values.squeeze(),index=pft_names,columns=landscape_ecotypes)
@@ -149,7 +149,28 @@ obsdata_PFT_mappings={'dwarf shrub deciduous':'arctic_deciduous_shrub_dwarf',
                         'tall shrub deciduous willow':'arctic_deciduous_shrub_tall' # **** Model is not separating birch and willow
                         }
 
+# Data from Amy measurements: doi:10.5440/1465967
+Breen_data=pandas.read_csv('../obs_data/ngee_arctic_kougarok_2016_veg_comp_env_table_v1_20180828.csv',header=0,skiprows=[1,2],skipinitialspace=True).dropna(axis='index',how='all')
+obs_heights=pandas.DataFrame(index=landscape_ecotypes)
+ecotype_height_mapping={
+    'Moist to dry alder (Alnus viridis) communities and alder savannas':'AS',
+    'Zonal habitats with erect-dwarf-shrub tundra acidic soils, subzones D and E':'DSLT',
+    'Dry azonal habitats, base-rich soils, subzones D and E':'DL',
+    'Tussock tundra (Eriophorum vaginatum)':'TT',
+    'Moist to dry alder (Alnus viridis) communities and alder savannas':'AS',
+    'Low-shrub tundra, acidic soils, warmest parts of subzone E':'WBT'
+}
+Breen_means=Breen_data.groupby('habitat_type').mean().rename(index=ecotype_height_mapping)  
+obs_heights['canopy_height_max']=Breen_means['maximum_ canopy_height']
+obs_heights['tree_height_mean']=Breen_means['mean_tree_layer_height']
+obs_heights['shrub_height_mean']=Breen_means['mean_shrub_layer_height']
+obs_heights['tall_shrub_height_mean']=Breen_means['mean_tall_shrub_height']
+obs_heights['low_shrub_height_mean']=Breen_means['mean_low_shrub_height']
+obs_heights['dwarf_shrub_height_mean']=Breen_means['mean_dwarf_shrub_height']
+obs_heights['forb_height_mean']=Breen_means['mean_forb_height']
 
+# convert from cm to m
+obs_heights=obs_heights/100
 
 def plot_var_PFTs(varname,moddata,ecotype_num,ax=None,obsdata=None,minyear=0,maxyear=150,longname=None,units=None,modfactor=1.0,cumulative=False,weight_area=True,plotsum=False,**kwargs):
     if isinstance(varname,str):
@@ -180,19 +201,21 @@ def plot_var_PFTs(varname,moddata,ecotype_num,ax=None,obsdata=None,minyear=0,max
 
     if not isinstance(moddata['time'].data[0],numpy.datetime64):
         t=array([tt.year + (tt.dayofyr-1)/365 for tt in moddata['time'].data])
+        dt=diff(t).mean()
 
         mindate=minyear
         maxdate=maxyear
         if cumulative:
-            dat=dat.cumsum(dim='time')
+            dat=dat.cumsum(dim='time')*dt
             dat=dat-dat.isel(time=nonzero(t>minyear)[0][0])
     else:
         t=moddata['time'].data
+        dt=diff(t).mean()
         mindate=datetime.date(minyear,1,1)
         maxdate=datetime.date(maxyear,1,1)
 
         if cumulative:
-            dat=dat.cumsum(dim='time')
+            dat=dat.cumsum(dim='time')*dt
             dat=dat-dat.sel(time=mindate)
 
 
@@ -230,6 +253,40 @@ def plot_var_PFTs(varname,moddata,ecotype_num,ax=None,obsdata=None,minyear=0,max
     return dat
 
 
+def plot_pair(var,vegdata_oldparams,vegdata_newparams,ecotype_num=1,**kwargs):
+    fig=figure(var,figsize=(6.4,6.4))
+    fig.clf()
+    nplots=2
+    gs=fig.add_gridspec(ncols=1,nrows=2)
+    subplot_handles={}
+    subplot_handles[var+'_old']=fig.add_subplot(gs[0,0])
+    subplot_handles[var+'_new']=fig.add_subplot(gs[1,0])
+
+    plot_var_PFTs(var,vegdata_oldparams,ecotype_num,ax=subplot_handles[var+'_old'],**kwargs)
+    plot_var_PFTs(var,vegdata_newparams,ecotype_num,ax=subplot_handles[var+'_new'],**kwargs)
+    leg=subplot_handles[var+'_old'].legend(fontsize='small')
+    leg.set_draggable(True)
+
+    tight_layout()
+    return fig
+    
+def get_var_PFTs(varname,moddata,weight_area=True):
+    if isinstance(varname,str):
+        dat=moddata[varname+'_unweighted'].copy()
+    else:
+        # Assuming we are adding multiple data fields together
+        dat=moddata[varname[0]+'_unweighted'].copy()
+        if len(varname)>1:
+            for name in varname[1:]:
+                dat=dat+moddata[name+'_unweighted']
+
+
+    if weight_area:
+        dat=dat*moddata.weights
+        
+    return dat
+
+
 def save_all_figs(dirname=basedir+'/Figures',format='png',**kwargs):
     for fname in get_figlabels():
         fname_fixed=fname.replace('/','-')
@@ -245,3 +302,38 @@ def pft_params(paramdata,paramnames):
     for name in paramnames:
         pdict[name]=paramdata[name]
     return pandas.DataFrame(pdict).set_index('pftname')
+    
+def plot_PFT_distributions():
+    subplot(121)
+    names=[]
+    bottom=zeros(len(landscape_ecotypes))
+    for pftnum in range(len(pft_names_default[:17])):
+        pft_pcts=PFT_percents_default.loc[pft_names_default[pftnum]]
+        if (pft_pcts==0).all():
+            continue
+        bar(arange(len(landscape_ecotypes)),pft_pcts,bottom=bottom,facecolor=pft_colors_default[pftnum])
+        bottom=bottom+pft_pcts
+        names.append(' '.join(pft_names_default[pftnum].split('_')).title() )
+
+    xticks(arange(len(landscape_ecotypes)),landscape_ecotypes,rotation=0)
+    title('Default ELM PFTs')
+    l=legend(labels=names,loc=(0.0,1.1),fontsize='small')
+    l.set_draggable(True)
+
+    subplot(122)
+    names=[]
+    bottom=zeros(len(landscape_ecotypes))
+    for pftnum in range(len(pft_names)):
+        pft_pcts=PFT_percents.loc[pft_names[pftnum]]
+        if (pft_pcts==0).all():
+            continue
+        bar(arange(len(landscape_ecotypes)),pft_pcts,bottom=bottom,facecolor=pft_colors[pftnum])
+        bottom=bottom+pft_pcts
+        names.append(' '.join(pft_names[pftnum].split('_')).title() )
+
+    xticks(arange(len(landscape_ecotypes)),landscape_ecotypes,rotation=0)
+    title('Updated ELM PFTs')
+    l=legend(labels=names,loc=(0.0,1.1),fontsize='small')
+    l.set_draggable(True)
+
+    tight_layout()
