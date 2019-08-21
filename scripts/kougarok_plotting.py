@@ -8,9 +8,9 @@ basedir='..'
 params_file=basedir+'/param_files/clm_params_newpfts_c180524_orig.nc'
 params_file_default=basedir+'/param_files/clm_params_defaultpfts_c180524_orig.nc'
 
-params_fengming=xarray.open_dataset(params_file,autoclose=True)
-params_default=xarray.open_dataset(params_file_default,autoclose=True)
-params_new=xarray.open_dataset(basedir+'/clm_params_updated.nc',autoclose=True)
+params_fengming=xarray.open_dataset(params_file)
+params_default=xarray.open_dataset(params_file_default)
+params_new=xarray.open_dataset(basedir+'/clm_params_updated.nc')
 
 pft_names=[name.strip() for name in params_fengming['pftname'].values.astype(str)]
 pft_names_default=[name.strip() for name in params_default['pftname'].values.astype(str)]
@@ -47,7 +47,7 @@ PFT_percents=pandas.DataFrame(data=surfdata.PCT_NAT_PFT.values.squeeze(),index=p
 PFT_percents_default=pandas.DataFrame(data=surfdata_default.PCT_NAT_PFT.values.squeeze(),index=pft_names_default[:17],columns=landscape_ecotypes)
 
 def read_pftfile(filename,maxyear=None):
-    output_PFTs=xarray.open_dataset(filename,autoclose=True)
+    output_PFTs=xarray.open_dataset(filename)
     if maxyear is not None:
         output_PFTs=output_PFTs.sel(time=array([xx.year for xx in output_PFTs.time.values])<=maxyear)
 
@@ -57,12 +57,17 @@ def read_pftfile(filename,maxyear=None):
         print('Reading from sim with default PFTs')
         vegdata_PFTs=xarray.Dataset(coords={'time':output_PFTs.time,'PFT':arange(len(pft_names_default[:17])),'ecotype':arange(len(landscape_ecotypes))})
         newshape=(len(landscape_ecotypes),len(pft_names_default[:17]))
+        vegdata_PFTs.coords['PFTnames']=xarray.DataArray(pft_names_default[:17],dims=('PFT',)) 
+        vegdata_PFTs.coords['PFTcolors']=xarray.DataArray(pft_colors_default[:17],dims=('PFT',))
     else:
         print('Reading from sim with new PFTs')
         vegdata_PFTs=xarray.Dataset(coords={'time':output_PFTs.time,'PFT':arange(len(pft_names)),'ecotype':arange(len(landscape_ecotypes))})
         newshape=(len(landscape_ecotypes),len(pft_names))
+        vegdata_PFTs.coords['PFTnames']=xarray.DataArray(pft_names,dims=('PFT',))
+        vegdata_PFTs.coords['PFTcolors']=xarray.DataArray(pft_colors,dims=('PFT',))
 
     vegdata_PFTs['weights']=(('ecotype','PFT'),weights.values.reshape(newshape))
+    vegdata_PFTs.coords['community_names']=xarray.DataArray(landscape_ecotypes,dims=('ecotype',))
     for varname in output_PFTs.variables:
         var=output_PFTs[varname]
         if var.dims != ('time','pft'):
@@ -149,6 +154,10 @@ obsdata_PFT_mappings={'dwarf shrub deciduous':'arctic_deciduous_shrub_dwarf',
                         'tall shrub deciduous willow':'arctic_deciduous_shrub_tall' # **** Model is not separating birch and willow
                         }
 
+default_new_mappings={'broadleaf_evergreen_shrub':'arctic_evergreen_shrub_dwarf',
+                      'broadleaf_deciduous_boreal_shrub':'arctic_deciduous_shrub_tall',
+                      'c3_arctic_grass':'arctic_dry_graminoid'}
+
 # Data from Amy measurements: doi:10.5440/1465967
 Breen_data=pandas.read_csv('../obs_data/ngee_arctic_kougarok_2016_veg_comp_env_table_v1_20180828.csv',header=0,skiprows=[1,2],skipinitialspace=True).dropna(axis='index',how='all')
 obs_heights=pandas.DataFrame(index=landscape_ecotypes)
@@ -225,13 +234,8 @@ def plot_var_PFTs(varname,moddata,ecotype_num,ax=None,obsdata=None,minyear=0,max
     dat=dat*modfactor
     ax.set_title(longname)
     for pft in moddata.PFT.values:
-        if len(moddata.PFT.values)>13:
-            # Using default PFTs
-            pftlabel=pft_names_default[pft]
-            c=pft_colors_default[pft]
-        else:
-            pftlabel=pft_names[pft]
-            c=pft_colors[pft]
+        pftlabel=str(moddata.PFTnames.sel(PFT=pft).values)
+        c=str(moddata.PFTcolors.sel(PFT=pft).values)
         if pftlabel.startswith('arctic_'):
             pftlabel=pftlabel[len('arctic_'):]
         ax.plot(t,dat.sel(ecotype=ecotype_num,PFT=pft),c=c,label=pftlabel,**kwargs)
@@ -246,9 +250,6 @@ def plot_var_PFTs(varname,moddata,ecotype_num,ax=None,obsdata=None,minyear=0,max
         # Collection was in 2016-2017, but model only goes through 2010. No big deal I guess.
         for pft in obsdata[landscape_ecotypes[ecotype_num]].index:
             ax.plot([mindate,maxdate],[obsdata[(landscape_ecotypes[ecotype_num],pft)],obsdata[(landscape_ecotypes[ecotype_num],pft)]],c=pft_colors[(pft_names.index(obsdata_PFT_mappings[pft]))],ls='--')
-
-
-
 
     return dat
 
