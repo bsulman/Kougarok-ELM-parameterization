@@ -15,11 +15,18 @@ params_new=xarray.open_dataset(basedir+'/clm_params_updated.nc')
 pft_names=[name.strip() for name in params_fengming['pftname'].values.astype(str)]
 pft_names_default=[name.strip() for name in params_default['pftname'].values.astype(str)]
 
-
+def prettify_pft_name(name):
+    if name.startswith('arctic'):
+        pretty_name=name[len('arctic_'):]
+    else:
+        pretty_name=name
+    pretty_name = ' '.join(pretty_name.split('_')).title()
+    return pretty_name
 
 # domaindata=xarray.open_dataset('/lustre/or-hydra/cades-ccsi/proj-shared/project_acme/cesminput_ngee/share/domains/domain.clm/domain.lnd.51x63pt_kougarok-NGEE_TransA_navy.nc')
 # surfdata=xarray.open_dataset(basedir+'/param_files/surfdata_51x63pt_kougarok-NGEE_TransA_simyr1850_c181115-sub12.nc')
-surfdata=xarray.open_dataset(basedir+'/param_files/surfdata_51x63pt_kougarok-NGEE_TransA_simyr1850_c181115-sub12_updated_2019-02-15.nc')
+# surfdata=xarray.open_dataset(basedir+'/param_files/surfdata_51x63pt_kougarok-NGEE_TransA_simyr1850_c181115-sub12_updated_2019-02-15.nc')
+surfdata=xarray.open_dataset(basedir+'/param_files/surfdata_51x63pt_kougarok-NGEE_TransA_simyr1850_c190604-sub12_updated_2019-06-17.nc')
 surfdata_default=xarray.open_dataset(basedir+'/param_files/surfdata_51x63pt_kougarok-NGEE_TransA_simyr1850_c181115default.nc')
 
 # landscape_ecotypes=['NAMC','DSLT','AS','WBT','TTWBT','TT']
@@ -29,9 +36,16 @@ surfdata_default=xarray.open_dataset(basedir+'/param_files/surfdata_51x63pt_koug
 #                'WBT' :'Willow birch tundra',
 #                'TTWBT':'Tussock tundra/willow birch tundra',
 #                'TT'  :'Tussock tundra'}
-landscape_ecotypes=['DL','DSLT','AS','WBT','ASV','TT']
-ecotype_names={'DL':'Dryas-lichen dwarf shrub tundra',
-               'DSLT':'Dwarf shrub lichen tundra',
+# landscape_ecotypes=['DL','DSLT','AS','WBT','ASV','TT']
+# ecotype_names={'DL':'Dryas-lichen dwarf shrub tundra',
+#                'DSLT':'Dwarf shrub lichen tundra',
+#                'AS'  :'Alder shrubland',
+#                'WBT' :'Willow birch tundra',
+#                'ASV':'Alder savanna',
+#                'TT'  :'Tussock tundra'}
+landscape_ecotypes=['DLST','BEL','AS','WBT','ASV','TT']
+ecotype_names={'DLST':'Dryas-lichen dwarf shrub tundra',
+               'BEL':'Birch-Ericaceous-lichen shrub tundra',
                'AS'  :'Alder shrubland',
                'WBT' :'Willow birch tundra',
                'ASV':'Alder savanna',
@@ -70,14 +84,20 @@ def read_pftfile(filename,maxyear=None):
     vegdata_PFTs.coords['community_names']=xarray.DataArray(landscape_ecotypes,dims=('ecotype',))
     for varname in output_PFTs.variables:
         var=output_PFTs[varname]
-        if var.dims != ('time','pft'):
-            continue
-        else:
+        if var.dims == ('time','pft'):
             print(varname)
             vardata=var.values[:,pft_mask].reshape((len(var.time),newshape[0],newshape[1]))
             vegdata_PFTs[var.name+'_unweighted']=(('time','ecotype','PFT'),vardata)
             vegdata_PFTs[var.name+'_unweighted'].attrs['long_name']=var.long_name
             vegdata_PFTs[var.name+'_unweighted'].attrs['units']=var.units
+        elif var.dims == ('time','levdcmp','pft'):
+            print(varname+' (depth-resolved)')
+            vardata=var.values[:,:,pft_mask].reshape((len(var.time),len(var.levdcmp),newshape[0],newshape[1]))
+            vegdata_PFTs[var.name+'_unweighted']=(('time','levdcmp','ecotype','PFT'),vardata)
+            vegdata_PFTs[var.name+'_unweighted'].attrs['long_name']=var.long_name
+            vegdata_PFTs[var.name+'_unweighted'].attrs['units']=var.units
+        else:
+            print('Skipping variable %s'%varname)
     return vegdata_PFTs
 
 
@@ -135,10 +155,17 @@ def plot_var(varname,obsdata=None,minyear=2008,maxyear=2010,longname=None,units=
     tight_layout()
     return defaultparams_ax,newparams_ax
 
-Koug_meas_biomass=pandas.read_excel(basedir+'/obs_data/NGEEArctic_Q3ELM_KougarokBiomass&NPP_20181112.xlsx',sheet_name='data')\
+# Older dataset
+Koug_meas_biomass_old=pandas.read_excel(basedir+'/obs_data/NGEEArctic_Q3ELM_KougarokBiomass&NPP_20181112.xlsx',sheet_name='data')\
     .set_index(['Ecotype','ELMgroup'])
-Koug_meas_chem=pandas.read_excel(basedir+'/obs_data/NGEEArctic_Q3ELM_KougarokSLA&Chemistry_20181112.xlsx',sheet_name='data')\
+Koug_meas_chem_old=pandas.read_excel(basedir+'/obs_data/NGEEArctic_Q3ELM_KougarokSLA&Chemistry_20181112.xlsx',sheet_name='data')\
     .rename(columns={'ELM_PFT':'ELMgroup'}).set_index(['Ecotype','ELMgroup'])
+
+# New version
+Koug_meas_biomass=pandas.read_excel(basedir+'/obs_data/NGEE Arctic Veg data compiled 12June2019/NGEEArctic_Q3ELM_KougarokBiomass&NPP_20190612.xlsx',sheet_name='data')\
+    .set_index(['Ecotype','PlotID','ELM_PFT'])
+Koug_meas_chem=pandas.read_excel(basedir+'/obs_data/NGEE Arctic Veg data compiled 12June2019/Kougarok_Q3ELM_KougarokSLA&Chemistry_20190612.xlsx',sheet_name='data')\
+    .set_index(['Ecotype','PlotID','ELM_PFT'])
 
 obsdata_PFT_mappings={'dwarf shrub deciduous':'arctic_deciduous_shrub_dwarf',
                       'dwarf shrub evergreen':'arctic_evergreen_shrub_dwarf',
@@ -148,10 +175,34 @@ obsdata_PFT_mappings={'dwarf shrub deciduous':'arctic_deciduous_shrub_dwarf',
                       'low shrub deciduous':'arctic_deciduous_shrub_low',
                       'mixed':'not_vegetated',            # *****
                       'moss':'arctic_bryophyte',
+                      'bryophyte':'arctic_bryophyte',
                         'other':'not_vegetated',          # ***** what to do with this?
                         'tall shrub deciduous alder':'arctic_deciduous_shrub_alder',
                         'tall shrub deciduous birch':'arctic_deciduous_shrub_tall', # **** Model is not separating birch and willow
-                        'tall shrub deciduous willow':'arctic_deciduous_shrub_tall' # **** Model is not separating birch and willow
+                        'tall shrub deciduous willow':'arctic_deciduous_shrub_tall', # **** Model is not separating birch and willow
+                        'potential tall shrub deciduous alder':'arctic_deciduous_shrub_alder',
+                        'potential tall shrub deciduous birch':'arctic_deciduous_shrub_tall', # **** Model is not separating birch and willow
+                        'potential tall shrub deciduous willow':'arctic_deciduous_shrub_tall', # **** Model is not separating birch and willow
+                        'potential tall shrub deciduous non-alder':'arctic_deciduous_shrub_tall'
+                        }
+                        
+obsdata_defaultPFT_mappings={'dwarf shrub deciduous':'broadleaf_deciduous_boreal_shrub',
+                      'dwarf shrub evergreen':'broadleaf_evergreen_shrub',
+                      'forb':'c3_arctic_grass',
+                      'graminoid':'c3_arctic_grass', # **** model has wet and dry graminoids
+                      'lichen':'nonvascular',
+                      'low shrub deciduous':'broadleaf_deciduous_boreal_shrub',
+                      'mixed':'not_vegetated',            # *****
+                      'moss':'nonvascular',
+                      'bryophyte':'nonvascular',
+                        'other':'not_vegetated',          # ***** what to do with this?
+                        'tall shrub deciduous alder':'broadleaf_deciduous_boreal_shrub',
+                        'tall shrub deciduous birch':'broadleaf_deciduous_boreal_shrub', # **** Model is not separating birch and willow
+                        'tall shrub deciduous willow':'broadleaf_deciduous_boreal_shrub', # **** Model is not separating birch and willow
+                        'potential tall shrub deciduous alder':'broadleaf_deciduous_boreal_shrub',
+                        'potential tall shrub deciduous birch':'broadleaf_deciduous_boreal_shrub', # **** Model is not separating birch and willow
+                        'potential tall shrub deciduous willow':'broadleaf_deciduous_boreal_shrub', # **** Model is not separating birch and willow
+                        'potential tall shrub deciduous non-alder':'broadleaf_deciduous_boreal_shrub'
                         }
 
 default_new_mappings={'broadleaf_evergreen_shrub':'arctic_evergreen_shrub_dwarf',
@@ -163,8 +214,8 @@ Breen_data=pandas.read_csv('../obs_data/ngee_arctic_kougarok_2016_veg_comp_env_t
 obs_heights=pandas.DataFrame(index=landscape_ecotypes)
 ecotype_height_mapping={
     'Moist to dry alder (Alnus viridis) communities and alder savannas':'AS',
-    'Zonal habitats with erect-dwarf-shrub tundra acidic soils, subzones D and E':'DSLT',
-    'Dry azonal habitats, base-rich soils, subzones D and E':'DL',
+    'Zonal habitats with erect-dwarf-shrub tundra acidic soils, subzones D and E':'BEL',
+    'Dry azonal habitats, base-rich soils, subzones D and E':'DLST',
     'Tussock tundra (Eriophorum vaginatum)':'TT',
     'Moist to dry alder (Alnus viridis) communities and alder savannas':'AS',
     'Low-shrub tundra, acidic soils, warmest parts of subzone E':'WBT'
@@ -248,8 +299,30 @@ def plot_var_PFTs(varname,moddata,ecotype_num,ax=None,obsdata=None,minyear=0,max
 
     if obsdata is not None:
         # Collection was in 2016-2017, but model only goes through 2010. No big deal I guess.
-        for pft in obsdata[landscape_ecotypes[ecotype_num]].index:
-            ax.plot([mindate,maxdate],[obsdata[(landscape_ecotypes[ecotype_num],pft)],obsdata[(landscape_ecotypes[ecotype_num],pft)]],c=pft_colors[(pft_names.index(obsdata_PFT_mappings[pft]))],ls='--')
+        if 'ELM_PFT' in obsdata.index.names:
+            if 'PlotID' in obsdata.index.names:
+                obsdata_mean=obsdata[landscape_ecotypes[ecotype_num]].mean(level='ELM_PFT')
+                obsdata_std=obsdata[landscape_ecotypes[ecotype_num]].std(level='ELM_PFT')
+            else:
+                obsdata_mean=obsdata[landscape_ecotypes[ecotype_num]]
+                obsdata_std=nan
+            for pft in obsdata_mean.index:
+                ax.fill_between([mindate,maxdate],[(obsdata_mean-obsdata_std)[pft],(obsdata_mean-obsdata_std)[pft]],
+                            [(obsdata_mean+obsdata_std)[pft],(obsdata_mean+obsdata_std)[pft]],
+                            color=pft_colors[(pft_names.index(obsdata_PFT_mappings[pft]))],alpha=0.3)
+                # ax.plot([mindate,maxdate],[obsdata_mean,obsdata_mean],c=pft_colors[(pft_names.index(obsdata_PFT_mappings[pft]))],ls='--')
+        else:
+            if 'PlotID' in obsdata.index.names:
+                obsdata_mean=obsdata[landscape_ecotypes[ecotype_num]].mean()
+                obsdata_std=obsdata[landscape_ecotypes[ecotype_num]].std()
+            else:
+                obsdata_mean=obsdata[landscape_ecotypes[ecotype_num]]
+                obsdata_std=nan
+
+            ax.fill_between([mindate,maxdate],[(obsdata_mean-obsdata_std),(obsdata_mean-obsdata_std)],
+                        [(obsdata_mean+obsdata_std),(obsdata_mean+obsdata_std)],
+                        color=pft_colors[pft_names.index('not_vegetated')],alpha=0.3)
+            # ax.plot([mindate,maxdate],[obsdata_mean,obsdata_mean],c=pft_colors[pft_names.index('not_vegetated')],ls='--')
 
     return dat
 

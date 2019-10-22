@@ -31,42 +31,54 @@ if __name__=='__main__':
     minyear=int(floor(t_col.min()))
     maxyear=int(ceil(t_col.max()))
     
-    Koug_meas_biomass.rename(index={'NAMC':'DL','TTWBT':'ASV'},inplace=True)
-    Koug_meas_chem.rename(index={'NAMC':'DL','TTWBT':'ASV'},inplace=True)
+    Koug_meas_biomass.rename(index={'NAMC':'DLST','TTWBT':'ASV','DSLT':'BEL'},inplace=True)
+    Koug_meas_chem.rename(index={'NAMC':'DLST','TTWBT':'ASV','DSLT':'BEL'},inplace=True)
 
-    meas_leaf_C=(Koug_meas_biomass['LeafBiomass_gperm2']*Koug_meas_chem['LeafC_percent']/100).groupby('Ecotype').sum()
-    meas_nonvasc_C=(Koug_meas_biomass['NonvascularBiomass_gperm2']*0.5).groupby('Ecotype').sum()
+    meas_leaf_C=(Koug_meas_biomass['Leaf_gperm2']*Koug_meas_chem['LeafC_percent']/100).copy()
+    meas_nonvasc_C=(Koug_meas_biomass['Nonvascular_gperm2']*0.5)
     # Should this include nonvascular biomass?
-    obsdata=meas_leaf_C+meas_nonvasc_C
-    # for ecotype in landscape_ecotypes:
-    #     obsdata=meas_leaf_C+meas_nonvasc_C
-    #     defaultparams_ax.plot([mindate,maxdate],[obsdata[ecotype],obsdata[ecotype]],c='C%d'%(landscape_ecotypes.index(ecotype)),ls=':')
-    #     newparams_ax.plot([mindate,maxdate],[obsdata[ecotype],obsdata[ecotype]],c='C%d'%(landscape_ecotypes.index(ecotype)),ls=':')
+    meas_leaf_C.loc[:,:,'bryophyte'] = meas_nonvasc_C[:,:,'bryophyte']
+    meas_leaf_C.loc[:,:,'lichen'] = meas_nonvasc_C[:,:,'lichen']
 
-    meas_root_C=Koug_meas_biomass['FineRootBiomass_gperm2'][:,'mixed']*(Koug_meas_chem['FineRootC_percent']/100).groupby('Ecotype').mean()
-    # Should rhizomes be treated as fine or coarse roots?
+    meas_root_C=Koug_meas_biomass['FineRoot_gperm2'][:,:,'mixed']*(Koug_meas_chem['FineRootC_percent'][:,:,'mixed']/100)
+    meas_stem_C=(Koug_meas_biomass['Stem_gperm2']*Koug_meas_chem['StemC_percent']/100)
+    meas_rhizome_C=(Koug_meas_biomass['Rhizome_gperm2']*Koug_meas_chem['RhizomeC_percent']/100)
+    meas_NPP_C=(Koug_meas_biomass['LeafNPP_gperm2peryear']*Koug_meas_chem['LeafC_percent']/100)+\
+        (Koug_meas_biomass['StemNPP_gperm2peryear']*Koug_meas_chem['StemC_percent']/100)#+\
 
-    meas_stem_C=(Koug_meas_biomass['StemBiomass_gperm2']*Koug_meas_chem['StemC_percent']/100).groupby('Ecotype').sum()
-    # Check this. WOODC appears to be sum of LIVESTEMC+DEADSTEMC+LIVECROOTC+DEADCROOTC
+    meas_froot_NPP =(Koug_meas_biomass['FineRootNPP_gperm2peryear']*Koug_meas_chem['FineRootC_percent']/100)[:,:,'mixed']
+    meas_leaf_NPP =(Koug_meas_biomass['LeafNPP_gperm2peryear']*Koug_meas_chem['LeafC_percent']/100)
+    meas_stem_NPP =(Koug_meas_biomass['StemNPP_gperm2peryear']*Koug_meas_chem['StemC_percent']/100)
+    meas_rhizome_NPP =(Koug_meas_biomass['RhizomeNPP_gperm2peryear']*Koug_meas_chem['RhizomeC_percent']/100)
 
-    # Try comparing rhizomes to LIVECROOTC
-    meas_rhizome_C=(Koug_meas_biomass['RhizomeBiomass_gperm2']*Koug_meas_chem['RhizomeC_percent']/100).groupby('Ecotype').sum()
+    # Add together willow and birch tall shrubs
+    meas_leaf_C.loc[:,:,'potential tall shrub deciduous birch'] = meas_leaf_C.loc[:,:,'potential tall shrub deciduous birch']+meas_leaf_C.loc[:,:,'potential tall shrub deciduous willow'] 
+    meas_leaf_C.rename(index={'potential tall shrub deciduous birch':'potential tall shrub deciduous non-alder'},inplace=True)
+    meas_leaf_C.drop('potential tall shrub deciduous willow',level='ELM_PFT',inplace=True)
+    meas_stem_C.loc[:,:,'potential tall shrub deciduous birch'] = meas_stem_C.loc[:,:,'potential tall shrub deciduous birch']+meas_stem_C.loc[:,:,'potential tall shrub deciduous willow'] 
+    meas_stem_C.rename(index={'potential tall shrub deciduous birch':'potential tall shrub deciduous non-alder'},inplace=True)
+    meas_stem_C.drop('potential tall shrub deciduous willow',level='ELM_PFT',inplace=True)
+    meas_rhizome_C.loc[:,:,'potential tall shrub deciduous birch'] = meas_rhizome_C.loc[:,:,'potential tall shrub deciduous birch']+meas_rhizome_C.loc[:,:,'potential tall shrub deciduous willow'] 
+    meas_rhizome_C.rename(index={'potential tall shrub deciduous birch':'potential tall shrub deciduous non-alder'},inplace=True)
+    meas_rhizome_C.drop('potential tall shrub deciduous willow',level='ELM_PFT',inplace=True)
+    meas_NPP_C.loc[:,:,'potential tall shrub deciduous birch'] = meas_NPP_C.loc[:,:,'potential tall shrub deciduous birch']+meas_NPP_C.loc[:,:,'potential tall shrub deciduous willow'] 
+    meas_NPP_C.rename(index={'potential tall shrub deciduous birch':'potential tall shrub deciduous non-alder'},inplace=True)
+    meas_NPP_C.drop('potential tall shrub deciduous willow',level='ELM_PFT',inplace=True)
 
+    def obs_to_defaultPFTs(obsdata):
+        # Best way I could figure out how to do this, sorry. Making a multilevel index with the same community and plot levels but new PFTs
+        new_index=pandas.MultiIndex.from_tuples([(x[0][0],x[0][1],x[1]) for x in pandas.MultiIndex.from_product((i.droplevel('ELM_PFT').drop_duplicates().values,unique(list(obsdata_defaultPFT_mappings.values())))).values],names=('Ecotype','PlotID','ELM_PFT')) 
+        if isinstance(obsdata,pandas.Series):
+            out=pandas.Series(index=new_index,data=0)
+            for pft in unique(obsdata.index.get_level_values('ELM_PFT')):
+                out.loc[:,:,obsdata_defaultPFT_mappings[pft]] = out.loc[:,:,obsdata_defaultPFT_mappings[pft]].add( obsdata.loc[:,:,pft].fillna(0.0), fill_value=0.0)
 
-    meas_leaf_C=(Koug_meas_biomass['LeafBiomass_gperm2']*Koug_meas_chem['LeafC_percent']/100).copy()
-    meas_nonvasc_C=(Koug_meas_biomass['NonvascularBiomass_gperm2']*0.5)
-    # Should this include nonvascular biomass?
-    for ecotype in landscape_ecotypes:
-        meas_leaf_C[ecotype,'moss']=meas_nonvasc_C.loc[ecotype,'moss']
-        meas_leaf_C[ecotype,'lichen']=meas_nonvasc_C.loc[ecotype,'lichen']
+        else:
+            raise TypeError('Must be a Series')
 
-    meas_root_C=Koug_meas_biomass['FineRootBiomass_gperm2'][:,'mixed']*(Koug_meas_chem['FineRootC_percent']/100)
-    meas_stem_C=(Koug_meas_biomass['StemBiomass_gperm2']*Koug_meas_chem['StemC_percent']/100)
-    meas_rhizome_C=(Koug_meas_biomass['RhizomeBiomass_gperm2']*Koug_meas_chem['RhizomeC_percent']/100)
-    meas_NPP_C=(Koug_meas_biomass['LeafNPP_gperm2peryr']*Koug_meas_chem['LeafC_percent']/100)+\
-        (Koug_meas_biomass['StemNPP_gperm2peryr']*Koug_meas_chem['StemC_percent']/100)#+\
+        return out
+        
 
-    meas_froot_NPP =(Koug_meas_biomass['FineRootNPP_gperm2peryr']*Koug_meas_chem['FineRootC_percent']/100).groupby('Ecotype').sum()
 
     plotvars=['leaf','froot','croot','store','stem','cnpp','height','downreg']
     nplots=len(plotvars)
@@ -78,7 +90,7 @@ if __name__=='__main__':
             if not (pft_pcts==0).all():
                 pfts_inuse.append(pftnum)
     else:
-        pfts_inuse=vegdata_PFTs.PFT.values
+        pfts_inuse=vegdata_PFTs.PFT.values[:-1]
         
     year=xarray.DataArray(array([tt.year for tt in vegdata_PFTs.time.data]),dims='time',coords={'time':vegdata_PFTs.time},name='year')
     annualmax=vegdata_PFTs.groupby(year,squeeze=False).max(dim='time',keep_attrs=True)
@@ -147,38 +159,6 @@ if __name__=='__main__':
         tight_layout(rect=(0.03,0.0,1.0,0.95))
         subplots_adjust(hspace=0.8)
         subplot_handles[landscape_ecotypes[0]]['froot'].legend(loc=(-1,1.2),ncol=7,fontsize='small',handles=list(array(subplot_handles[landscape_ecotypes[0]]['froot'].lines)[pfts_inuse]))
-
-    # Plot some biomass ratios
-
-    meas_leaf_C=(Koug_meas_biomass['LeafBiomass_gperm2']*Koug_meas_chem['LeafC_percent']/100)
-    meas_root_C=(Koug_meas_biomass['FineRootBiomass_gperm2'][:,'mixed']*(Koug_meas_chem['FineRootC_percent']/100))[:,'mixed']
-    meas_stem_C=(Koug_meas_biomass['StemBiomass_gperm2']*(Koug_meas_chem['StemC_percent']/100))
-
-    obs_leafCN = Koug_meas_chem['LeafC_percent']/Koug_meas_chem['LeafN_percent']
-    obs_stemCN = Koug_meas_chem['StemC_percent']/Koug_meas_chem['StemN_percent']
-    obs_frootCN = 54.6/1.3 # Obs uses a single value for fine roots
-    # Measured tissue C:N ratios are in weight units, and model expects gC/gN so they should be comparable.
-
-
-    # For now: let's assume that relative amount of leaf biomass is proportional to relative amount of root biomass
-    # But we may want to change to a different approach like PFT % coverage
-    # Or does it make more sense to calculate these at the ecotype scale?
-    # Also: This param is really defined to be NPP ratio, not biomass ratio. Should we parameterize using NPP measurements instead?
-    leafCfrac=meas_leaf_C/meas_leaf_C.groupby('Ecotype').sum()
-
-    def froot_leaf(ecotype,pft):
-        froot_leaf=meas_root_C[ecotype]*leafCfrac[ecotype][pft]/meas_leaf_C[ecotype][pft]
-        #print('{ecotype:s}: {pft:s} leaf frac {leafCfrac:1.2f}, froot_leaf = {froot_leaf:1.2f}'.format(leafCfrac=leafCfrac[ecotype][pft],ecotype=ecotype,pft=pft,froot_leaf=froot_leaf))
-        return froot_leaf
-
-    def leaf_stem(ecotype,pft):
-        return meas_stem_C[ecotype]/meas_leaf_C[ecotype][pft]
-
-    leaf=vegdata_PFTs['LEAFC_unweighted']
-    stemleafratio_newparams=xarray.Dataset({'stem_leaf_ratio_unweighted':(vegdata_PFTs['LIVESTEMC_unweighted']+vegdata_PFTs['DEADSTEMC_unweighted'])/leaf.where(leaf>0.01).rolling(time=365*2).max()})
-    frootleafratio_newparams=xarray.Dataset({'froot_leaf_ratio_unweighted':vegdata_PFTs['FROOTC_unweighted']/vegdata_PFTs['LEAFC_unweighted']})
-
-    froot_leaf_obs = meas_root_C/meas_leaf_C.sum(level='Ecotype')
 
     available_plots.append('cumul_rootresp')
     if 'cumul_rootresp' in plots_to_do or 'all' in plots_to_do:
@@ -256,7 +236,8 @@ if __name__=='__main__':
     available_plots.append('Nfix')
     if 'Nfix' in plots_to_do or 'all' in plots_to_do:
         
-        figure('N fixation(%s)'%dataname);clf()
+        figure('N fixation(%s)'%dataname,figsize=(6.4,6.7));clf()
+        subplot(211)
         x=arange(6)
         nfix_obs={'AS':1.95,'ASV':0.53}
         nfix_obs_error={'AS':0.68,'ASV':0.19}
@@ -269,21 +250,30 @@ if __name__=='__main__':
         ylabel('N input rate (gN m$^{-2}$ year$^{-1}$)')
         legend()
         
-
-
-    Koug_meas_biomass.rename(index={'NAMC':'DL','TTWBT':'ASV'},inplace=True)
-    Koug_meas_chem.rename(index={'NAMC':'DL','TTWBT':'ASV'},inplace=True)
-
-    meas_leaf_C=(Koug_meas_biomass['LeafBiomass_gperm2']*Koug_meas_chem['LeafC_percent']/100)
-    meas_nonvasc_C=(Koug_meas_biomass['NonvascularBiomass_gperm2']*0.5)
-    meas_rhizome_C=(Koug_meas_biomass['RhizomeBiomass_gperm2']*Koug_meas_chem['RhizomeC_percent']/100).groupby('Ecotype').sum()
-    meas_root_C=Koug_meas_biomass['FineRootBiomass_gperm2'][:,'mixed']*(Koug_meas_chem['FineRootC_percent']/100)
-    meas_stem_C=(Koug_meas_biomass['StemBiomass_gperm2']*Koug_meas_chem['StemC_percent']/100)
-    meas_rhizome_C=(Koug_meas_biomass['RhizomeBiomass_gperm2']*Koug_meas_chem['RhizomeC_percent']/100)
-    meas_NPP_C=(Koug_meas_biomass['LeafNPP_gperm2peryr']*Koug_meas_chem['LeafC_percent']/100)+\
-        (Koug_meas_biomass['StemNPP_gperm2peryr']*Koug_meas_chem['StemC_percent']/100)#+\
-
-    meas_froot_NPP =(Koug_meas_biomass['FineRootNPP_gperm2peryr']*Koug_meas_chem['FineRootC_percent']/100).groupby('Ecotype').sum()
+        subplot(212)
+        title('Nutrient and moisture limitation')
+        x=arange(6)
+        w=0.8/3
+        Nlim=((columndata['GPP']*columndata['FPG']).groupby(year).sum(dim='time')/columndata['GPP'].groupby(year).sum(dim='time'))
+        Plim=((columndata['GPP']*columndata['FPG_P']).groupby(year).sum(dim='time')/columndata['GPP'].groupby(year).sum(dim='time'))
+        moisturelim=((columndata['GPP']*columndata['BTRAN']).groupby(year).sum(dim='time')/columndata['GPP'].groupby(year).sum(dim='time'))
+        bar(x,1-Nlim.mean(dim='year'),yerr=Nlim.std(dim='year'),color='g',label='N limitation (FPG)',width=w,edgecolor='k')
+        bar(x+w,1-Plim.mean(dim='year'),yerr=Plim.std(dim='year'),color='orange',label='P limitation (FPG_P)',width=w,edgecolor='k')
+        bar(x+w*2,1-moisturelim.mean(dim='year'),yerr=moisturelim.std(dim='year'),color='b',label='Moisture limitation (BTRAN)',width=w,edgecolor='k')
+        xticks(x,landscape_ecotypes)
+        legend()
+        
+        tight_layout()
+        
+        figure('N fixation relations(%s)'%dataname);clf()
+        npp=arange(0,200,20)
+        
+        plot(npp,1.8*(1-exp(-0.003*npp)),'k--',label='Default ELM')
+        for pft in range(1,len(pft_names)-1):
+            plot(npp,params_new['Nfix_NPP_c1'].values[pft]*(1-exp(-params_new['Nfix_NPP_c2'].values[pft]*npp)),c=pft_colors[pft],label=prettify_pft_name(pft_names[pft]))
+        xlabel('NPP (gC m$^{-2}$ year$^{-1}$)')
+        ylabel('N fixation (gN m$^{-2}$ year$^{-1}$)')
+        legend(fontsize='small')
 
     years=array([xx.year for xx in vegdata_PFTs.time.values])
     last_100_years=vegdata_PFTs.sel(time=((years.max()-years)<100))
@@ -325,20 +315,19 @@ if __name__=='__main__':
     def plot_obs_bar_stack(x,obsdata,ecotype_num,**kwargs):
         names=[]
         bottom=0.0
-        for pft in obsdata[landscape_ecotypes[ecotype_num]].index:
-            val=obsdata[(landscape_ecotypes[ecotype_num],pft)]
+        for pft in unique(obsdata[landscape_ecotypes[ecotype_num]].index.get_level_values('ELM_PFT')):
+            if 'PlotID' in obsdata.index.names:
+                val=obsdata.loc[landscape_ecotypes[ecotype_num],:,pft].mean()
+                valstd=obsdata.loc[landscape_ecotypes[ecotype_num],:,pft].std()
+            else:
+                val=obsdata[(landscape_ecotypes[ecotype_num],pft)]
+                valstd=nan
 
             if ~isnan(val):
-                bar(x,val,bottom=bottom,facecolor=pft_colors[(pft_names.index(obsdata_PFT_mappings[pft]))],**kwargs)
+                bar(x,val,bottom=bottom,facecolor=pft_colors[(pft_names.index(obsdata_PFT_mappings[pft]))],yerr=valstd,**kwargs)
                 bottom=bottom+val
 
-    def prettify_pft_name(name):
-        if name.startswith('arctic'):
-            pretty_name=name[len('arctic_'):]
-        else:
-            pretty_name=name
-        pretty_name = ' '.join(pretty_name.split('_')).title()
-        return pretty_name
+
     
     available_plots.append('biomass')    
     if 'biomass' in plots_to_do or 'all' in plots_to_do:
@@ -383,7 +372,7 @@ if __name__=='__main__':
 
 
         handles=[]
-        for pftnum in range(1,len(data_to_plot.PFT)-1):
+        for pftnum in pfts_inuse[1:]:
             name = prettify_pft_name(data_to_plot.PFTnames.values[pftnum])
             if name == 'Dry Graminoid':
                 name = 'Graminoid'
@@ -394,165 +383,238 @@ if __name__=='__main__':
         tight_layout()
 
 
+        
+        def plot_pft_biomass_bars(per_area=False,use_pooled_default_PFTs=True):
+
+            w=0.8/6/2
+            if 'c3_arctic_grass' in data_to_plot.PFTnames and use_pooled_default_PFTs:
+                ncols=len(pfts_inuse)
+                nrows=1
+                for n in range(len(pfts_inuse[1:])):
+                    subplot(nrows,ncols,n+1)
+                    title(prettify_pft_name(pft_names_default[pfts_inuse[n+1]]))
+                    ylabel('Biomass (gC m$^{-2}$)')
+                    xticks(arange(6)/6,landscape_ecotypes)
+                subplot(nrows,ncols,n+2)
+                title('Nonvascular')
+                ylabel('Biomass (gC m$^{-2}$)')
+                xticks(arange(6)/6,landscape_ecotypes)
+            else:
+                nrows=2
+                ncols=5
+                for n in range(1,11):
+                    subplot(2,5,n)
+                    title(prettify_pft_name(pft_names[n]))
+                    ylabel('Biomass (gC m$^{-2}$)')
+                    xticks(arange(6)/6,landscape_ecotypes)
+            for pftnum in pfts_inuse[1:]:
+                if 'c3_arctic_grass' in data_to_plot.PFTnames:
+                    if use_pooled_default_PFTs:
+                        n=pfts_inuse.index(pftnum)
+                    else:
+                        n=pft_names.index(default_new_mappings[data_to_plot.PFTnames.values[pftnum]])
+
+                else:
+                    n=pftnum
+
+                subplot(nrows,ncols,n)
+                bottom=zeros(6)
+                bottom_obs=zeros(6)
+                handles=[]
+                
+                vals=get_var_PFTs('FROOTC',data_to_plot,weight_area=not per_area).max(dim='time').sel(PFT=pftnum)
+                h=bar(arange(6)/6,vals,bottom=bottom,width=w,facecolor='brown',label='Fine root',hatch='//')
+                bottom=bottom+vals.fillna(0)
+                handles.append(h)
+                
+                vals=get_var_PFTs(['LIVECROOTC','DEADCROOTC'],data_to_plot,weight_area=not per_area).mean(dim='time').sel(PFT=pftnum)
+                h=bar(arange(6)/6,vals,bottom=bottom,width=w,facecolor='orange',label='Coarse root',hatch='//')
+                bottom=bottom+vals.fillna(0)
+                handles.append(h)
+                
+                vals=get_var_PFTs('STORVEGC',data_to_plot,weight_area=not per_area).mean(dim='time').sel(PFT=pftnum)
+                h=bar(arange(6)/6,vals,bottom=bottom,width=w,facecolor='yellow',label='Storage',hatch='//')
+                bottom=bottom+vals.fillna(0)
+                handles.append(h)
+                # bar(arange(6)/6+w,meas_rhizome_C)
+                
+                vals=get_var_PFTs(['LIVESTEMC','DEADSTEMC'],data_to_plot,weight_area=not per_area).mean(dim='time').sel(PFT=pftnum)
+                h=bar(arange(6)/6,vals,bottom=bottom,width=w,facecolor='blue',label='Stem',hatch='//')
+                bottom=bottom+vals.fillna(0)
+                handles.append(h)
+                
+                vals=get_var_PFTs('LEAFC',data_to_plot,weight_area=not per_area).max(dim='time').sel(PFT=pftnum)
+                h=bar(arange(6)/6,vals,bottom=bottom,width=w,facecolor='green',label='Leaf',hatch='//')
+                bottom=bottom+vals.fillna(0)
+                handles.append(h)  
+
+                
+            
+            if 'c3_arctic_grass' in data_to_plot.PFTnames and use_pooled_default_PFTs:
+                obsdata={'leaf':obs_to_defaultPFTs(meas_leaf_C),
+                         'rhizome':obs_to_defaultPFTs(meas_rhizome_C),
+                         'stem':obs_to_defaultPFTs(meas_stem_C),
+                         'nonvasc':obs_to_defaultPFTs(meas_nonvasc_C)}
+            else:
+                obsdata={'leaf':meas_leaf_C,
+                         'rhizome':meas_rhizome_C,
+                         'stem':meas_stem_C,
+                         'nonvasc':meas_nonvasc_C}                
+            for pftname in unique(obsdata['leaf'].index.get_level_values('ELM_PFT')) :
+                if pftname in ['other','mixed']:
+                     continue
+                if 'c3_arctic_grass' in data_to_plot.PFTnames and use_pooled_default_PFTs:
+                    if pftname=='nonvascular':
+                        ax=gcf().axes[-1]
+                    else:
+                        ax=gcf().axes[pfts_inuse.index(data_to_plot.PFTnames.values.tolist().index(pftname))-1]
+                else:
+                    ax=gcf().axes[pft_names.index(obsdata_PFT_mappings[pftname])-1]
+                for econum in range(len(landscape_ecotypes)):
+                    if per_area:
+                        if 'c3_arctic_grass' in data_to_plot.PFTnames and use_pooled_default_PFTs:
+                            if pftname=='nonvascular':
+                                areafrac=(PFT_percents[landscape_ecotypes[econum]]['arctic_lichen']+PFT_percents[landscape_ecotypes[econum]]['arctic_bryophyte'])/100
+                            else:
+                                areafrac=PFT_percents_default[landscape_ecotypes[econum]][pftname]/100
+                        else:
+                            areafrac=PFT_percents[landscape_ecotypes[econum]][obsdata_PFT_mappings[pftname]]/100
+                        if areafrac==0.0:
+                            invareafrac=0.0
+                        else:
+                            invareafrac=1.0/areafrac
+                    else:
+                        invareafrac=1.0
+                    plotIDs=unique(obsdata['leaf'][landscape_ecotypes[econum]].index.get_level_values('PlotID'))
+                    for plotnum,plotID in enumerate(plotIDs):
+                        bottom=0.0
+                        if per_area and pftname not in ['moss','lichen','nonvascular']:
+                            val=meas_root_C[landscape_ecotypes[econum],plotID]
+                            h_obsroot=ax.bar(econum/6+w+plotnum*w/len(plotIDs),val,bottom=bottom,facecolor='brown',width=w/len(plotIDs),label='Pooled obs fine roots')
+                            bottom=bottom+val
+                        
+                        val=obsdata['rhizome'][landscape_ecotypes[econum],plotID].fillna(0.0).get(pftname,0.0)*invareafrac
+                        ax.bar(econum/6+w+plotnum*w/len(plotIDs),val,bottom=bottom,facecolor='orange',width=w/len(plotIDs))
+                        bottom=bottom+val
+                        val=obsdata['stem'][landscape_ecotypes[econum],plotID].fillna(0.0).get(pftname,0.0)*invareafrac
+                        ax.bar(econum/6+w+plotnum*w/len(plotIDs),val,bottom=bottom,facecolor='blue',width=w/len(plotIDs))
+                        bottom=bottom+val
+                        val=obsdata['leaf'][landscape_ecotypes[econum],plotID].fillna(0.0).get(pftname,0.0)*invareafrac
+                        ax.bar(econum/6+w+plotnum*w/len(plotIDs),val,bottom=bottom,facecolor='green',width=w/len(plotIDs))
+                        bottom=bottom+val
+                        val=obsdata['nonvasc'][landscape_ecotypes[econum],plotID].fillna(0.0).get(pftname,0.0)*invareafrac
+                        h_nonvasc=ax.bar(econum/6+w+plotnum*w/len(plotIDs),val,bottom=bottom,facecolor='cyan',width=w/len(plotIDs),label='Non-vascular')
+                        bottom=bottom+val
+                        
+
+
+            handles.append(h_nonvasc)
+            l=gcf().axes[3].legend(fontsize='small',ncol=2,handles=handles)
+            l.set_draggable(True)
+
+            tight_layout()
 
         barfig_PFT=figure('Biomass comparison by PFT (%s)'%dataname,figsize=(15,8));clf()
-
-        w=0.8/6/2
-        for n in range(1,11):
-            subplot(2,5,n)
-            title(prettify_pft_name(pft_names[n]))
-        for pftnum in pfts_inuse[1:]:
-            if 'c3_arctic_grass' in data_to_plot.PFTnames:
-                n=pft_names.index(default_new_mappings[data_to_plot.PFTnames.values[pftnum]])
-            else:
-                n=pftnum
-            subplot(2,5,n)
-            bottom=zeros(6)
-            bottom_obs=zeros(6)
-            handles=[]
-            
-            vals=get_var_PFTs('FROOTC',data_to_plot).max(dim='time').sel(PFT=pftnum)
-            h=bar(arange(6)/6,vals,bottom=bottom,width=w,facecolor='brown',label='Fine root',hatch='//')
-            bottom=bottom+vals.fillna(0)
-            handles.append(h)
-            
-            vals=get_var_PFTs(['LIVECROOTC','DEADCROOTC'],data_to_plot).mean(dim='time').sel(PFT=pftnum)
-            h=bar(arange(6)/6,vals,bottom=bottom,width=w,facecolor='orange',label='Coarse root',hatch='//')
-            bottom=bottom+vals.fillna(0)
-            handles.append(h)
-            
-            vals=get_var_PFTs('STORVEGC',data_to_plot).mean(dim='time').sel(PFT=pftnum)
-            h=bar(arange(6)/6,vals,bottom=bottom,width=w,facecolor='yellow',label='Storage',hatch='//')
-            bottom=bottom+vals.fillna(0)
-            handles.append(h)
-            # bar(arange(6)/6+w,meas_rhizome_C)
-            
-            vals=get_var_PFTs(['LIVESTEMC','DEADSTEMC'],data_to_plot).mean(dim='time').sel(PFT=pftnum)
-            h=bar(arange(6)/6,vals,bottom=bottom,width=w,facecolor='blue',label='Stem',hatch='//')
-            bottom=bottom+vals.fillna(0)
-            handles.append(h)
-            
-            vals=get_var_PFTs('LEAFC',data_to_plot).max(dim='time').sel(PFT=pftnum)
-            h=bar(arange(6)/6,vals,bottom=bottom,width=w,facecolor='green',label='Leaf',hatch='//')
-            bottom=bottom+vals.fillna(0)
-            handles.append(h)  
-
-            ylabel('Biomass (gC m$^{-2}$)')
-            # xticks(arange(1,len(pft_names)-1)+0.3,[prettify_pft_name(name) for name in pft_names])
-            xticks(arange(6)/6,landscape_ecotypes)
-            
-
-        for pftname in obsdata_PFT_mappings.keys():
-            if pftname in ['other','mixed']:
-                 continue
-            ax=barfig_PFT.axes[pft_names.index(obsdata_PFT_mappings[pftname])-1]
-            for econum in range(len(landscape_ecotypes)):
-                bottom=0.0
-                val=meas_rhizome_C[landscape_ecotypes[econum]].fillna(0.0).get(pftname,0.0)
-                ax.bar(econum/6+w,val,bottom=bottom,facecolor='orange',width=w)
-                bottom=bottom+val
-                val=meas_stem_C[landscape_ecotypes[econum]].fillna(0.0).get(pftname,0.0)
-                ax.bar(econum/6+w,val,bottom=bottom,facecolor='blue',width=w)
-                bottom=bottom+val
-                val=meas_leaf_C[landscape_ecotypes[econum]].fillna(0.0).get(pftname,0.0)
-                ax.bar(econum/6+w,val,bottom=bottom,facecolor='green',width=w)
-                bottom=bottom+val
-                val=meas_nonvasc_C[landscape_ecotypes[econum]].fillna(0.0).get(pftname,0.0)
-                h_nonvasc=ax.bar(econum/6+w,val,bottom=bottom,facecolor='cyan',width=w,label='Non-vascular')
-                bottom=bottom+val
-
-        handles.append(h_nonvasc)
-        l=barfig_PFT.axes[3].legend(fontsize='small',ncol=2,handles=handles)
-        l.set_draggable(True)
-
-        tight_layout()
-
-
+        plot_pft_biomass_bars(per_area=False,use_pooled_default_PFTs=True)
 
         barfig_PFT_perarea=figure('Biomass comparison per area of each PFT (%s)'%dataname,figsize=(15,8));clf()
-
-        w=0.8/6/3
-        for n in range(1,11):
-            subplot(2,5,n)
-            title(prettify_pft_name(pft_names[n]))
-        for pftnum in pfts_inuse[1:]:
-            if 'c3_arctic_grass' in data_to_plot.PFTnames:
-                n=pft_names.index(default_new_mappings[data_to_plot.PFTnames.values[pftnum]])
-            else:
-                n=pftnum
-            subplot(2,5,n)
-            bottom=zeros(6)
-            bottom_obs=zeros(6)
-            handles=[]
+        plot_pft_biomass_bars(per_area=True,use_pooled_default_PFTs=True)
+        
+        figure('NPP (%s)'%dataname,figsize=(15,8));clf()
+        for econum in range(6):
+            subplot(2,3,econum+1)
+            x=arange(len(pfts_inuse))
+            w=0.8/3
+            bar(x,get_var_PFTs('NPP',data_to_plot.sel(PFT=pfts_inuse)).sel(ecotype=econum).mean(dim='time').values*3600*24*365,color=data_to_plot.PFTcolors[pfts_inuse].values,width=w,hatch='//')
+            bar(x+w,get_var_PFTs('AGNPP',data_to_plot.sel(PFT=pfts_inuse)).sel(ecotype=econum).mean(dim='time').values*3600*24*365,color=data_to_plot.PFTcolors[pfts_inuse].values,width=w,hatch='/')
             
-            vals=get_var_PFTs('FROOTC',data_to_plot,weight_area=False).max(dim='time').sel(PFT=pftnum)
-            h=bar(arange(6)/6,vals,bottom=bottom,width=w,facecolor='brown',label='Fine root',hatch='//')
-            bottom=bottom+vals.fillna(0)
-            handles.append(h)
-            
-            vals=get_var_PFTs(['LIVECROOTC','DEADCROOTC'],data_to_plot,weight_area=False).mean(dim='time').sel(PFT=pftnum)
-            h=bar(arange(6)/6,vals,bottom=bottom,width=w,facecolor='orange',label='Coarse root',hatch='//')
-            bottom=bottom+vals.fillna(0)
-            handles.append(h)
-            
-            vals=get_var_PFTs('STORVEGC',data_to_plot,weight_area=False).mean(dim='time').sel(PFT=pftnum)
-            h=bar(arange(6)/6,vals,bottom=bottom,width=w,facecolor='yellow',label='Storage',hatch='//')
-            bottom=bottom+vals.fillna(0)
-            handles.append(h)
-            # bar(arange(6)/6+w,meas_rhizome_C)
-            
-            vals=get_var_PFTs(['LIVESTEMC','DEADSTEMC'],data_to_plot,weight_area=False).mean(dim='time').sel(PFT=pftnum)
-            h=bar(arange(6)/6,vals,bottom=bottom,width=w,facecolor='blue',label='Stem',hatch='//')
-            bottom=bottom+vals.fillna(0)
-            handles.append(h)
-            
-            vals=get_var_PFTs('LEAFC',data_to_plot,weight_area=False).max(dim='time').sel(PFT=pftnum)
-            h=bar(arange(6)/6,vals,bottom=bottom,width=w,facecolor='green',label='Leaf',hatch='//')
-            bottom=bottom+vals.fillna(0)
-            handles.append(h)  
-
-            ylabel('Biomass (gC m$^{-2}$)')
-            # xticks(arange(1,len(pft_names)-1)+0.3,[prettify_pft_name(name) for name in pft_names])
-            xticks(arange(6)/6,landscape_ecotypes)
-
-
-        for pftname in obsdata_PFT_mappings.keys():
-            if pftname in ['other','mixed']:
-                 continue
-            ax=barfig_PFT_perarea.axes[pft_names.index(obsdata_PFT_mappings[pftname])-1]
-            for econum in range(len(landscape_ecotypes)):
-                bottom=0.0
-                areafrac=PFT_percents[landscape_ecotypes[econum]][obsdata_PFT_mappings[pftname]]/100
-                if areafrac==0.0:
-                    invareafrac=0.0
-                else:
-                    invareafrac=1.0/areafrac
-                    
-                if pftname not in ['moss','lichen']:
-                    val=meas_root_C[landscape_ecotypes[econum]]
-                    h_obsroot=ax.bar(econum/6+w*2,val,bottom=bottom,facecolor='brown',width=w,hatch='.',label='Pooled obs fine roots')
-                    # bottom=bottom+val
-                val=meas_rhizome_C[landscape_ecotypes[econum]].fillna(0.0).get(pftname,0.0)*invareafrac
-                h_rhizome=ax.bar(econum/6+w,val,bottom=bottom,facecolor='orange',width=w,label='Obs rhizome')
-                bottom=bottom+val
-                val=meas_stem_C[landscape_ecotypes[econum]].fillna(0.0).get(pftname,0.0)*invareafrac
-                ax.bar(econum/6+w,val,bottom=bottom,facecolor='blue',width=w)
-                bottom=bottom+val
-                val=meas_leaf_C[landscape_ecotypes[econum]].fillna(0.0).get(pftname,0.0)*invareafrac
-                ax.bar(econum/6+w,val,bottom=bottom,facecolor='green',width=w)
-                bottom=bottom+val
-                val=meas_nonvasc_C[landscape_ecotypes[econum]].fillna(0.0).get(pftname,0.0)*invareafrac
-                h_nonvasc=ax.bar(econum/6+w,val,bottom=bottom,facecolor='cyan',width=w,label='Obs non-vascular')
-                bottom=bottom+val
-                
-
-        handles.append(h_nonvasc)
-        handles.append(h_obsroot)
-        handles.append(h_rhizome)
-        l=barfig_PFT_perarea.axes[3].legend(fontsize='small',ncol=1,handles=handles)
-        l.set_draggable(True)
-
-        tight_layout()
+            xticks(x,[prettify_pft_name(name) for name in data_to_plot.PFTnames.values[pfts_inuse]],rotation=30,ha='right')
+        
+        # 
+        # w=0.8/6/3
+        # for n in range(1,11):
+        #     subplot(2,5,n)
+        #     title(prettify_pft_name(pft_names[n]))
+        #     ylabel('Biomass (gC m$^{-2}$)')
+        #     xticks(arange(6)/6,landscape_ecotypes)
+        # for pftnum in pfts_inuse[1:]:
+        #     if 'c3_arctic_grass' in data_to_plot.PFTnames:
+        #         n=pft_names.index(default_new_mappings[data_to_plot.PFTnames.values[pftnum]])
+        #     else:
+        #         n=pftnum
+        #     subplot(2,5,n)
+        #     bottom=zeros(6)
+        #     bottom_obs=zeros(6)
+        #     handles=[]
+        # 
+        #     vals=get_var_PFTs('FROOTC',data_to_plot,weight_area=False).max(dim='time').sel(PFT=pftnum)
+        #     h=bar(arange(6)/6,vals,bottom=bottom,width=w,facecolor='brown',label='Fine root',hatch='//')
+        #     bottom=bottom+vals.fillna(0)
+        #     handles.append(h)
+        # 
+        #     vals=get_var_PFTs(['LIVECROOTC','DEADCROOTC'],data_to_plot,weight_area=False).mean(dim='time').sel(PFT=pftnum)
+        #     h=bar(arange(6)/6,vals,bottom=bottom,width=w,facecolor='orange',label='Coarse root',hatch='//')
+        #     bottom=bottom+vals.fillna(0)
+        #     handles.append(h)
+        # 
+        #     vals=get_var_PFTs('STORVEGC',data_to_plot,weight_area=False).mean(dim='time').sel(PFT=pftnum)
+        #     h=bar(arange(6)/6,vals,bottom=bottom,width=w,facecolor='yellow',label='Storage',hatch='//')
+        #     bottom=bottom+vals.fillna(0)
+        #     handles.append(h)
+        #     # bar(arange(6)/6+w,meas_rhizome_C)
+        # 
+        #     vals=get_var_PFTs(['LIVESTEMC','DEADSTEMC'],data_to_plot,weight_area=False).mean(dim='time').sel(PFT=pftnum)
+        #     h=bar(arange(6)/6,vals,bottom=bottom,width=w,facecolor='blue',label='Stem',hatch='//')
+        #     bottom=bottom+vals.fillna(0)
+        #     handles.append(h)
+        # 
+        #     vals=get_var_PFTs('LEAFC',data_to_plot,weight_area=False).max(dim='time').sel(PFT=pftnum)
+        #     h=bar(arange(6)/6,vals,bottom=bottom,width=w,facecolor='green',label='Leaf',hatch='//')
+        #     bottom=bottom+vals.fillna(0)
+        #     handles.append(h)  
+        # 
+        # 
+        # 
+        # for pftname in unique(meas_leaf_C.index.get_level_values('ELM_PFT')) :
+        #     if pftname in ['other','mixed']:
+        #          continue
+        #     ax=barfig_PFT_perarea.axes[pft_names.index(obsdata_PFT_mappings[pftname])-1]
+        #     for econum in range(len(landscape_ecotypes)):
+        # 
+        #         areafrac=PFT_percents[landscape_ecotypes[econum]][obsdata_PFT_mappings[pftname]]/100
+        #         if areafrac==0.0:
+        #             invareafrac=0.0
+        #         else:
+        #             invareafrac=1.0/areafrac
+        # 
+        #         plotIDs=unique(meas_rhizome_C[landscape_ecotypes[econum]].index.get_level_values('PlotID'))
+        #         for plotnum,plotID in enumerate(plotIDs):
+        #             bottom=0.0
+        #             if pftname not in ['moss','lichen']:
+        #                 val=meas_root_C[landscape_ecotypes[econum],plotID]
+        #                 h_obsroot=ax.bar(econum/6+w+plotnum*w/len(plotIDs),val,bottom=bottom,facecolor='brown',width=w/len(plotIDs),label='Pooled obs fine roots')
+        #                 bottom=bottom+val
+        #             val=meas_rhizome_C[landscape_ecotypes[econum],plotID].fillna(0.0).get(pftname,0.0)*invareafrac
+        #             h_rhizome=ax.bar(econum/6+w+plotnum*w/len(plotIDs),val,bottom=bottom,facecolor='orange',width=w/len(plotIDs),label='Obs rhizome')
+        #             bottom=bottom+val
+        #             val=meas_stem_C[landscape_ecotypes[econum],plotID].fillna(0.0).get(pftname,0.0)*invareafrac
+        #             ax.bar(econum/6+w+plotnum*w/len(plotIDs),val,bottom=bottom,facecolor='blue',width=w/len(plotIDs))
+        #             bottom=bottom+val
+        #             val=meas_leaf_C[landscape_ecotypes[econum],plotID].fillna(0.0).get(pftname,0.0)*invareafrac
+        #             ax.bar(econum/6+w+plotnum*w/len(plotIDs),val,bottom=bottom,facecolor='green',width=w/len(plotIDs))
+        #             bottom=bottom+val
+        #             val=meas_nonvasc_C[landscape_ecotypes[econum],plotID].fillna(0.0).get(pftname,0.0)*invareafrac
+        #             h_nonvasc=ax.bar(econum/6+w+plotnum*w/len(plotIDs),val,bottom=bottom,facecolor='cyan',width=w/len(plotIDs),label='Obs non-vascular')
+        #             bottom=bottom+val
+        # 
+        # 
+        # handles.append(h_nonvasc)
+        # handles.append(h_obsroot)
+        # handles.append(h_rhizome)
+        # l=barfig_PFT_perarea.axes[3].legend(fontsize='small',ncol=1,handles=handles)
+        # l.set_draggable(True)
+        # 
+        # tight_layout()
     
     available_plots.append('height')
     if 'height' in plots_to_do or 'all' in plots_to_do:
@@ -592,26 +654,21 @@ if __name__=='__main__':
     if 'AG_BG' in plots_to_do or 'all' in plots_to_do:
         
         figure('Aboveground-belowground (%s)'%dataname,figsize=(10.8,4.8));clf()
-        meas_leaf_C=(Koug_meas_biomass['LeafBiomass_gperm2']*Koug_meas_chem['LeafC_percent']/100)
-        meas_root_C=(Koug_meas_biomass['FineRootBiomass_gperm2'][:,'mixed']*(Koug_meas_chem['FineRootC_percent']/100))[:,'mixed']
-        meas_rhizome_C=(Koug_meas_biomass['RhizomeBiomass_gperm2']*Koug_meas_chem['RhizomeC_percent']/100)
-        meas_rhizome_NPP=(Koug_meas_biomass['RhizomeNPP_gperm2peryr']*Koug_meas_chem['RhizomeC_percent']/100)
-        meas_leaf_NPP   =(Koug_meas_biomass['LeafNPP_gperm2peryr']*Koug_meas_chem['LeafC_percent']/100)
-        meas_stem_NPP   =(Koug_meas_biomass['StemNPP_gperm2peryr']*Koug_meas_chem['StemC_percent']/100)
-        meas_root_NPP   =(Koug_meas_biomass['FineRootNPP_gperm2peryr']*Koug_meas_chem['FineRootC_percent']/100)[:,'mixed']
 
-        aboveground_C = (meas_leaf_C+meas_stem_C).sum(level='Ecotype')
-        aboveground_NPP = (meas_leaf_NPP+meas_stem_NPP).sum(level='Ecotype')
-        belowground_C = meas_rhizome_C.sum(level='Ecotype') + meas_root_C
-        belowground_NPP = meas_rhizome_NPP.sum(level='Ecotype') + meas_root_NPP
+        aboveground_C = (meas_leaf_C+meas_stem_C).groupby(level=('Ecotype','PlotID')).sum() 
+        aboveground_NPP = (meas_leaf_NPP+meas_stem_NPP).groupby(level=('Ecotype','PlotID')).sum()
+        belowground_C = meas_rhizome_C.groupby(level=('Ecotype','PlotID')).sum() + meas_root_C
+        belowground_NPP = meas_rhizome_NPP.groupby(level=('Ecotype','PlotID')).sum() + meas_froot_NPP
 
         mod_aboveground_NPP = get_var_PFTs('AGNPP',data_to_plot).mean(dim='time').sum(dim='PFT')*3600*24*365
         mod_belowground_NPP = get_var_PFTs('BGNPP',data_to_plot).mean(dim='time').sum(dim='PFT')*3600*24*365
         mod_aboveground_C  = get_var_PFTs(['LEAFC','LIVESTEMC','DEADSTEMC'],data_to_plot).max(dim='time').sum(dim='PFT')
         mod_belowground_C  = get_var_PFTs(['FROOTC','LIVECROOTC','DEADCROOTC'],data_to_plot).max(dim='time').sum(dim='PFT')
 
-        bar(arange(len(landscape_ecotypes)),100*(belowground_C/(aboveground_C+belowground_C))[landscape_ecotypes],width=0.2,label='Biomass')
-        bar(arange(len(landscape_ecotypes))+0.2,100*(belowground_NPP/(aboveground_NPP+belowground_NPP))[landscape_ecotypes],width=0.2,label='NPP')
+        val=100*(belowground_C/(aboveground_C+belowground_C))[landscape_ecotypes]
+        bar(arange(len(landscape_ecotypes)),val.mean(level='Ecotype'),yerr=val.std(level='Ecotype'),width=0.2,label='Biomass')
+        val=100*(belowground_NPP/(aboveground_NPP+belowground_NPP))[landscape_ecotypes]
+        bar(arange(len(landscape_ecotypes))+0.2,val.mean(level='Ecotype'),yerr=val.std(level='Ecotype'),width=0.2,label='NPP')
         bar(arange(len(landscape_ecotypes))+0.4,100*(mod_belowground_C/(mod_aboveground_C+mod_belowground_C)),width=0.2,label='Mod biomass',facecolor='C0',hatch='//')
         bar(arange(len(landscape_ecotypes))+0.6,100*(mod_belowground_NPP/(mod_aboveground_NPP+mod_belowground_NPP)),width=0.2,label='Mod NPP',facecolor='C1',hatch='//')
         names=[ecotype_names[name] for name in landscape_ecotypes]
@@ -627,9 +684,9 @@ if __name__=='__main__':
     if 'nonvasc' in plots_to_do or 'all' in plots_to_do:
         
         figure('Non-vascular (%s)'%dataname);clf()
-        meas_lichen_BM=Koug_meas_biomass['NonvascularBiomass_gperm2'][:,'lichen']
-        meas_moss_BM=Koug_meas_biomass['NonvascularBiomass_gperm2'][:,'moss']
-        meas_other_nonvasc_BM=Koug_meas_biomass['NonvascularBiomass_gperm2'][:,'other']
+        meas_lichen_BM=Koug_meas_biomass['Nonvascular_gperm2'][:,:,'lichen']
+        meas_moss_BM=Koug_meas_biomass['Nonvascular_gperm2'][:,:,'bryophyte']
+        # meas_other_nonvasc_BM=Koug_meas_biomass['Nonvascular_gperm2'][:,'other']
         meas_vasc_AG_BM=(Koug_meas_biomass['LeafBiomass_gperm2']+Koug_meas_biomass['StemBiomass_gperm2']).sum(level='Ecotype')
 
         bottom=meas_lichen_BM.reindex(landscape_ecotypes,fill_value=0.0)*0
@@ -640,9 +697,9 @@ if __name__=='__main__':
         y=meas_moss_BM.reindex(landscape_ecotypes,fill_value=0.0)
         bar(arange(len(landscape_ecotypes)),y,width=0.3,label='Moss',color=pft_colors[pft_names.index('arctic_bryophyte')],bottom=bottom)
         bottom=bottom+y
-        y=meas_other_nonvasc_BM.reindex(landscape_ecotypes,fill_value=0.0)
-        bar(arange(len(landscape_ecotypes)),y,width=0.3,label='Other nonvasc.',color='gray',bottom=bottom)
-        bottom=bottom+y
+        # y=meas_other_nonvasc_BM.reindex(landscape_ecotypes,fill_value=0.0)
+        # bar(arange(len(landscape_ecotypes)),y,width=0.3,label='Other nonvasc.',color='gray',bottom=bottom)
+        # bottom=bottom+y
         y=meas_vasc_AG_BM.reindex(landscape_ecotypes,fill_value=0.0)
         bar(arange(len(landscape_ecotypes))+0.3,y,width=0.3,label='Vascular',color='brown')
         # bottom=bottom.add(meas_vasc_AG_BM,fill_value=0.0)
@@ -673,6 +730,15 @@ if __name__=='__main__':
             ylabel('Vcmax(25C)\n(umol m$^{-2}$ s$^{-1}$)')
         legend(fontsize='small',ncol=1,loc=(1.0,1.0))
         tight_layout()
+        
+        # x=arange(len(pfts_inuse))
+        # bar(x,get_var_PFTs('VCMAX25TOP',data_to_plot.sel(PFT=pfts_inuse),weight_area=False).max(dim='time').mean(dim='ecotype').values,color=data_to_plot.PFTcolors[pfts_inuse].values)
+        # xticks(x,[prettify_pft_name(name) for name in data_to_plot.PFTnames.values[pfts_inuse]],rotation=30,ha='right')
+        # ylabel('VCmax (umolCO2 m$^{-2}$ s$^{-1}$)')
+        # title('Maximum VCmax')
+        # subplots_adjust(bottom=0.25)
+        
+        
 
 
     import cartopy.crs as ccrs
@@ -689,8 +755,68 @@ if __name__=='__main__':
         ax.add_feature(cartopy.feature.BORDERS.with_scale('50m'))
         ax.scatter(-164.82,65.16,marker='*',s=50,c='g',transform=ccrs.Geodetic())
 
+    available_plots.append('rootprofile')
+    if 'rootprofile' in plots_to_do or 'all' in plots_to_do:
+        fig=figure('Root profile');clf()
+        
+        depths=columndata['levdcmp']
+        dz=zeros(len(depths))
+        dz[0]=0.5*(depths[0]+depths[1])  
+        dz[1:-1]=0.5*(depths.shift({'levdcmp':-1})-depths.shift({'levdcmp':1}))[1:-1]
+        dz[-1]=depths[-1]-depths[-2]
+        
+        for eco in vegdata_PFTs['ecotype'].values:
+            subplot(2,3,eco+1)
+            # for pft in vegdata_PFTs['PFT'][1:-1]:
+            for pft in [1,3,10]:
+                y=(vegdata_PFTs['FROOT_PROF_unweighted'][:,:,eco,pft].mean(dim='time')*dz).cumsum(dim='levdcmp')
+                if y.max()==0:
+                    y[:]=nan
+                plot(y,columndata['levdcmp'],
+                        color=vegdata_PFTs.PFTcolors.values[pft],label=prettify_pft_name(vegdata_PFTs.PFTnames.values[pft]))
+            ALTmax=columndata['ALTMAX_LASTYEAR'].isel(lndgrid=eco).mean()
+            WTdepth=columndata['ZWT'].isel(lndgrid=eco).mean()
+            WTdepth_perched=columndata['ZWT_PERCH'].isel(lndgrid=eco).mean()
+            xlims=xlim()
+            plot(xlims,[ALTmax,ALTmax],'k--',label='Max active layer depth')
+            # plot(xlims,[WTdepth,WTdepth],'b--',label='WT depth')
+            plot(xlims,[surfdata['aveDTB'].isel(lsmlon=eco),surfdata['aveDTB'].isel(lsmlon=eco)],'--',label='Bedrock depth')
+            plot(xlims,[WTdepth_perched,WTdepth_perched],'b:',label='Perched WT depth')
+            ylim(10,-0.5)
+            xlabel('Cumulative root fraction')
+            ylabel('Depth (m)')
+            title(ecotype_names[vegdata_PFTs['community_names'].values[eco]])
+        legend(fontsize='small',ncol=1,
+            labels=['Nonvascular (beta=0.0)','Evergreen (beta=0.964)','Deciduous (beta=0.914)','Max active layer thickness','Bedrock depth','Perched WT depth'])
+        
+        tight_layout()
+        
+        figure('Root depth time series');clf()
+        for eco in vegdata_PFTs['ecotype'].values:
+            subplot(2,3,eco+1)
+            t=array([tt.year+(tt.month-1)/12 for tt in columndata.time.values])
+            # for pft in vegdata_PFTs['PFT'][1:-1]:
+            for pft in [1,3,10]:
+                if (vegdata_PFTs['FROOT_PROF_unweighted'][:,:,eco,pft]*dz).isnull().all():
+                    y=zeros(len(t))+nan
+                else:
+                    y=depths[((vegdata_PFTs['FROOT_PROF_unweighted'][:,:,eco,pft]*dz).cumsum(dim='levdcmp')>0.9).argmax(dim='levdcmp')]
 
-
+                plot(t,y,
+                        color=vegdata_PFTs.PFTcolors.values[pft],label=prettify_pft_name(vegdata_PFTs.PFTnames.values[pft]))
+            plot(t,columndata['ALTMAX_LASTYEAR'].isel(lndgrid=eco),'k-')
+            # plot(t,columndata['ZWT'].isel(lndgrid=eco),'b-')
+            plot([t[0],t[-1]],[surfdata['aveDTB'].isel(lsmlon=eco),surfdata['aveDTB'].isel(lsmlon=eco)],'--',label='Bedrock depth')
+            plot(t,columndata['ZWT_PERCH'].isel(lndgrid=eco),'b:')
+            title(ecotype_names[vegdata_PFTs['community_names'].values[eco]])
+            ylabel('90% cumulative root depth (m)')
+            ylims=ylim()
+            ylim(ylims[1],ylims[0])
+            xlim(1980,2010)
+        gcf().axes[0].legend(fontsize='small',ncol=1,
+            labels=['Nonvascular (beta=0.0)','Evergreen (beta=0.964)','Deciduous (beta=0.914)','Max active layer thickness','Bedrock depth','Perched WT depth'])
+        tight_layout()
+        
     show()
 
     for p in plots_to_do:
