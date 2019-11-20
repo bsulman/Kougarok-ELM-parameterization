@@ -24,7 +24,7 @@ if __name__=='__main__':
     dataname=os.path.basename(filename)
     vegdata_PFTs=read_pftfile(filename,maxyear=None)
     
-    columndata=xarray.open_dataset(filename.replace('h1','h0'))
+    columndata=xarray.open_dataset(filename.replace('h1','h0').replace('h2','h0'))
     t_col=array([tt.year + (tt.dayofyr-1)/365 for tt in columndata['time'].data])
     Tsoil10cm=columndata['TSOI_10CM']
 
@@ -687,36 +687,52 @@ if __name__=='__main__':
         meas_lichen_BM=Koug_meas_biomass['Nonvascular_gperm2'][:,:,'lichen']
         meas_moss_BM=Koug_meas_biomass['Nonvascular_gperm2'][:,:,'bryophyte']
         # meas_other_nonvasc_BM=Koug_meas_biomass['Nonvascular_gperm2'][:,'other']
-        meas_vasc_AG_BM=(Koug_meas_biomass['LeafBiomass_gperm2']+Koug_meas_biomass['StemBiomass_gperm2']).sum(level='Ecotype')
+        meas_vasc_AG_BM=(Koug_meas_biomass['Leaf_gperm2']+Koug_meas_biomass['Stem_gperm2']).sum(level='PlotID')
 
-        bottom=meas_lichen_BM.reindex(landscape_ecotypes,fill_value=0.0)*0
+        w=0.2
+        for econum in range(len(landscape_ecotypes)):
+            plotIDs=meas_lichen_BM[landscape_ecotypes[econum]].index.get_level_values('PlotID')
+            for plotnum,plotID in enumerate(plotIDs):
+                bottom=0.0
+                y=meas_lichen_BM[landscape_ecotypes[econum]][plotID]
+                lichenbar=bar(econum+plotnum*w/len(plotIDs),y,bottom=bottom,width=w/len(plotIDs),label='Lichen',color=pft_colors[pft_names.index('arctic_lichen')],align='edge')
+                bottom=bottom+y
+                y=meas_moss_BM[landscape_ecotypes[econum]][plotID]
+                mossbar=bar(econum+plotnum*w/len(plotIDs),y,bottom=bottom,width=w/len(plotIDs),label='Moss',color=pft_colors[pft_names.index('arctic_bryophyte')],align='edge')
+                y=meas_vasc_AG_BM[plotID]
+                vascbar=bar(econum+w+plotnum*w/len(plotIDs),y,facecolor='brown',width=w/len(plotIDs),label='Vascular',align='edge')
 
-        y=meas_lichen_BM.reindex(landscape_ecotypes,fill_value=0.0)
-        bar(arange(len(landscape_ecotypes)),y,width=0.3,label='Lichen',color=pft_colors[pft_names.index('arctic_lichen')],bottom=bottom)
-        bottom=bottom+y
-        y=meas_moss_BM.reindex(landscape_ecotypes,fill_value=0.0)
-        bar(arange(len(landscape_ecotypes)),y,width=0.3,label='Moss',color=pft_colors[pft_names.index('arctic_bryophyte')],bottom=bottom)
-        bottom=bottom+y
-        # y=meas_other_nonvasc_BM.reindex(landscape_ecotypes,fill_value=0.0)
-        # bar(arange(len(landscape_ecotypes)),y,width=0.3,label='Other nonvasc.',color='gray',bottom=bottom)
+        # y=meas_lichen_BM.reindex(landscape_ecotypes,fill_value=0.0)
+        # bar(arange(len(landscape_ecotypes)),y,width=0.3,label='Lichen',color=pft_colors[pft_names.index('arctic_lichen')],bottom=bottom)
         # bottom=bottom+y
-        y=meas_vasc_AG_BM.reindex(landscape_ecotypes,fill_value=0.0)
-        bar(arange(len(landscape_ecotypes))+0.3,y,width=0.3,label='Vascular',color='brown')
-        # bottom=bottom.add(meas_vasc_AG_BM,fill_value=0.0)
+        # y=meas_moss_BM.reindex(landscape_ecotypes,fill_value=0.0)
+        # bar(arange(len(landscape_ecotypes)),y,width=0.3,label='Moss',color=pft_colors[pft_names.index('arctic_bryophyte')],bottom=bottom)
+        # bottom=bottom+y
+        # # y=meas_other_nonvasc_BM.reindex(landscape_ecotypes,fill_value=0.0)
+        # # bar(arange(len(landscape_ecotypes)),y,width=0.3,label='Other nonvasc.',color='gray',bottom=bottom)
+        # # bottom=bottom+y
+        # y=meas_vasc_AG_BM.reindex(landscape_ecotypes,fill_value=0.0)
+        # bar(arange(len(landscape_ecotypes))+0.3,y,width=0.3,label='Vascular',color='brown')
+        # # bottom=bottom.add(meas_vasc_AG_BM,fill_value=0.0)
 
         if 'arctic_bryophyte' in data_to_plot.PFTnames:
-            mod_moss=get_var_PFTs('TOTVEGC',data_to_plot,0).max(dim='time').sel(PFT=pft_names.index('arctic_bryophyte'))
-            mod_lichen=get_var_PFTs('TOTVEGC',data_to_plot,0).max(dim='time').sel(PFT=pft_names.index('arctic_lichen'))
+            mod_moss=get_var_PFTs('TOTVEGC',data_to_plot,True).max(dim='time').sel(PFT=pft_names.index('arctic_bryophyte'))
+            mod_lichen=get_var_PFTs('TOTVEGC',data_to_plot,True).max(dim='time').sel(PFT=pft_names.index('arctic_lichen'))
+            mod_vascular = get_var_PFTs(['LEAFC','LIVESTEMC','DEADSTEMC'],data_to_plot).max(dim='time').sel(PFT=arange(3,len(pft_names))).sum(dim='PFT')
         else:
             mod_moss=zeros(len(landscape_ecotypes))
             mod_lichen=zeros(len(landscape_ecotypes))
-        bar(arange(len(landscape_ecotypes))+0.3+0.3,mod_lichen,label='Mod moss',color=[.3,1,.3],width=0.3)
-        bar(arange(len(landscape_ecotypes))+0.3+0.3,mod_moss,bottom=mod_lichen,label='Mod lichen',color='orange',width=0.3)
+            mod_vascular = get_var_PFTs(['LEAFC','LIVESTEMC','DEADSTEMC'],data_to_plot).max(dim='time').sum(dim='PFT')
+            
+        modmossbar=bar(arange(len(landscape_ecotypes))+w*2,mod_lichen,label='Mod moss',color=[.3,1,.3],width=w,hatch='//',align='edge')
+        modlichenbar=bar(arange(len(landscape_ecotypes))+w*2,mod_moss,bottom=mod_lichen,label='Mod lichen',color='orange',width=w,hatch='//',align='edge')
+        modvascbar=bar(arange(len(landscape_ecotypes))+w*3,mod_vascular,label='Mod vasc',color='brown',width=w,hatch='//',align='edge')
+        
         title('Aboveground vascular and non-vascular biomass')
         ylabel('Total biomass (g DW m$^{-2}$)')
-        l=legend()
+        l=legend(handles=(mossbar,lichenbar,vascbar,modmossbar,modlichenbar,modvascbar))
         l.set_draggable(True)
-        xticks(arange(len(landscape_ecotypes))+0.3,[ecotype_names[name] for name in landscape_ecotypes] ,rotation=45,ha='right')
+        xticks(arange(len(landscape_ecotypes))+w,[ecotype_names[name] for name in landscape_ecotypes] ,rotation=45,ha='right')
         tight_layout()
         
     available_plots.append('vcmax')
