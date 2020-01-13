@@ -1,7 +1,8 @@
 import xarray
 
 basedir='..'
-params=xarray.open_dataset(basedir+'/param_files/clm_params_newpfts_c180524_orig.nc',autoclose=True,)
+params=xarray.open_dataset(basedir+'/param_files/clm_params_newpfts_c180524_orig.nc')
+params=xarray.open_dataset(basedir+'/param_files/clm_params_defaultpfts_c180524_orig.nc') 
 
 pft_names=[name.strip() for name in params['pftname'].values.astype(str)]
 
@@ -176,6 +177,8 @@ if __name__=='__main__':
     change_param('leafcn',pft,obs_leafCN[:,'tall shrub deciduous alder'].mean())
     change_param('frootcn',pft,obs_frootCN)
     change_param('fcur',pft,fcur_pfts[:,'tall shrub deciduous alder'].mean() )
+    change_param('stem_leaf',pft,0.20)
+    change_param('croot_stem',pft,0.5)
 
 
     # Graminoid
@@ -201,8 +204,8 @@ if __name__=='__main__':
     # Root longevity values from TT in Verity's data description Table 3
     rootlong=3.13
     leaflong=2.0
-    change_param('froot_leaf',pftdry,froot_leaf_gram*leaflong/rootlong)
-    change_param('froot_leaf',pftwet,froot_leaf_gram*leaflong/rootlong)
+    change_param('froot_leaf',pftdry,froot_leaf_gram*leaflong/rootlong*1.2)
+    change_param('froot_leaf',pftwet,froot_leaf_gram*leaflong/rootlong*1.2)
 
     printnote('Graminoid SLA is much higher in WBT than other sites. What to do about that?')
     change_param('slatop',pftwet,Koug_meas_chem['LeafSLA_cm2perg'][:,'graminoid'].mean()/100**2)
@@ -248,6 +251,11 @@ if __name__=='__main__':
  
     change_param('fcur',pft,fcur_pfts[:,'forb'].mean())
     change_param('froot_leaf',pft,2.0)
+    change_param('flnr',pft,0.2)
+
+    # Lichen
+    change_param('froot_leaf','arctic_lichen',0.2)
+    change_param('leaf_long','arctic_lichen',10.0)
 
     # Set up params for new dormant maintenance respiration
     dormant_mr_temp=273.15+2.5
@@ -261,11 +269,12 @@ if __name__=='__main__':
     from numpy import zeros
     params['Nfix_NPP_c1']=xarray.DataArray(name='Nfix_NPP_c1',dims='pft',data=zeros(len(pft_names))+1.8,attrs={'units':'gN/m2/yr','long_name':'Pre-exponential factor in NPP-Nfix equation'})
     params['Nfix_NPP_c2']=xarray.DataArray(name='Nfix_NPP_c2',dims='pft',data=zeros(len(pft_names))+0.003,attrs={'units':'gN/m2/yr','long_name':'Exponential factor in NPP-Nfix equation'})
-    change_param('Nfix_NPP_c1','arctic_deciduous_shrub_alder',3.6)
-    change_param('Nfix_NPP_c1','arctic_forb',2.5)
+    change_param('Nfix_NPP_c1','arctic_deciduous_shrub_alder',10.0)
+    change_param('Nfix_NPP_c1','arctic_forb',5.0)
+    change_param('Nfix_NPP_c2','arctic_deciduous_shrub_alder',0.05)
 
     print('Saving params file to clm_params_updated.nc')
-    params.to_netcdf('clm_params_updated.nc')
+    params.to_netcdf(basedir+'/clm_params_updated.nc',format='NETCDF4_CLASSIC')
     
 
 
