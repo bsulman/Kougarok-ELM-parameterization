@@ -23,11 +23,19 @@ def prettify_pft_name(name):
     pretty_name = ' '.join(pretty_name.split('_')).title()
     return pretty_name
 
+def get_time(data):
+    if isinstance(columndata['time'].data[0],numpy.datetime64):
+        t=pandas.DatetimeIndex(columndata['time'].data)
+        return t.year+(t.dayofyear-1)/365
+    else:
+        return array([tt.year + (tt.dayofyr-1)/365 for tt in columndata['time'].data])
+
 # domaindata=xarray.open_dataset('/lustre/or-hydra/cades-ccsi/proj-shared/project_acme/cesminput_ngee/share/domains/domain.clm/domain.lnd.51x63pt_kougarok-NGEE_TransA_navy.nc')
 # surfdata=xarray.open_dataset(basedir+'/param_files/surfdata_51x63pt_kougarok-NGEE_TransA_simyr1850_c181115-sub12.nc')
 # surfdata=xarray.open_dataset(basedir+'/param_files/surfdata_51x63pt_kougarok-NGEE_TransA_simyr1850_c181115-sub12_updated_2019-02-15.nc')
 surfdata=xarray.open_dataset(basedir+'/param_files/surfdata_51x63pt_kougarok-NGEE_TransA_simyr1850_c190604-sub12_updated_2019-06-17.nc')
-surfdata_default=xarray.open_dataset(basedir+'/param_files/surfdata_51x63pt_kougarok-NGEE_TransA_simyr1850_c181115default.nc')
+# surfdata_default=xarray.open_dataset(basedir+'/param_files/surfdata_51x63pt_kougarok-NGEE_TransA_simyr1850_c181115default.nc')
+surfdata_default=xarray.open_dataset(basedir+'/param_files/surfdata_Kougarok_defaultPFTs_all-shrubs-decid-boreal.nc')
 
 # landscape_ecotypes=['NAMC','DSLT','AS','WBT','TTWBT','TT']
 # ecotype_names={'NAMC':'Non-acidic mountain complex',
@@ -49,16 +57,21 @@ ecotype_names={'DLST':'Dryas-lichen dwarf shrub tundra',
                'AS'  :'Alder shrubland',
                'WBT' :'Willow birch tundra',
                'ASV':'Alder savanna',
-               'TT'  :'Tussock tundra'}
+               'TT'  :'Tussock tundra',
+               'Gridcell':'Downscaled grid cell'}
 
 pft_colors=['C%d'%n for n in range(10)] + ['k','purple']
 pft_colors_default=['C0' for n in range(len(pft_names_default))]
 pft_colors_default[pft_names_default.index('broadleaf_evergreen_shrub')]='C3'
 pft_colors_default[pft_names_default.index('broadleaf_deciduous_boreal_shrub')]='C7'
 pft_colors_default[pft_names_default.index('c3_arctic_grass')]='k'
+pft_colors_default[pft_names_default.index('needleleaf_evergreen_boreal_tree')]='C6'
 
 PFT_percents=pandas.DataFrame(data=surfdata.PCT_NAT_PFT.values.squeeze(),index=pft_names,columns=landscape_ecotypes)
 PFT_percents_default=pandas.DataFrame(data=surfdata_default.PCT_NAT_PFT.values.squeeze(),index=pft_names_default[:17],columns=landscape_ecotypes)
+
+surfdata_E3SM=xarray.open_dataset('../param_files/surfdata_Kougarok_downscaled_PFTs_soildepths.nc')
+PFT_percents_E3SM=pandas.DataFrame(data=surfdata_E3SM.PCT_NAT_PFT.values.squeeze(),index=pft_names_default[:17],columns=landscape_ecotypes)
 
 def read_pftfile(filename,maxyear=None):
     output_PFTs=xarray.open_dataset(filename)
@@ -67,21 +80,26 @@ def read_pftfile(filename,maxyear=None):
 
     pft_mask=output_PFTs.pfts1d_itype_lunit == 1
     weights=output_PFTs.pfts1d_wtgcell[pft_mask]
-    if len(weights) == len(pft_names_default[:17])*len(landscape_ecotypes):
+    if len(weights) == len(pft_names_default[:17])*len(output_PFTs.lndgrid):
         print('Reading from sim with default PFTs')
-        vegdata_PFTs=xarray.Dataset(coords={'time':output_PFTs.time,'PFT':arange(len(pft_names_default[:17])),'ecotype':arange(len(landscape_ecotypes))})
-        newshape=(len(landscape_ecotypes),len(pft_names_default[:17]))
+        vegdata_PFTs=xarray.Dataset(coords={'time':output_PFTs.time,'PFT':arange(len(pft_names_default[:17])),'ecotype':arange(len(output_PFTs.lndgrid))})
+        newshape=(len(output_PFTs.lndgrid),len(pft_names_default[:17]))
         vegdata_PFTs.coords['PFTnames']=xarray.DataArray(pft_names_default[:17],dims=('PFT',)) 
         vegdata_PFTs.coords['PFTcolors']=xarray.DataArray(pft_colors_default[:17],dims=('PFT',))
     else:
         print('Reading from sim with new PFTs')
-        vegdata_PFTs=xarray.Dataset(coords={'time':output_PFTs.time,'PFT':arange(len(pft_names)),'ecotype':arange(len(landscape_ecotypes))})
-        newshape=(len(landscape_ecotypes),len(pft_names))
+        vegdata_PFTs=xarray.Dataset(coords={'time':output_PFTs.time,'PFT':arange(len(pft_names)),'ecotype':arange(len(output_PFTs.lndgrid))})
+        newshape=(len(output_PFTs.lndgrid),len(pft_names))
         vegdata_PFTs.coords['PFTnames']=xarray.DataArray(pft_names,dims=('PFT',))
         vegdata_PFTs.coords['PFTcolors']=xarray.DataArray(pft_colors,dims=('PFT',))
 
     vegdata_PFTs['weights']=(('ecotype','PFT'),weights.values.reshape(newshape))
-    vegdata_PFTs.coords['community_names']=xarray.DataArray(landscape_ecotypes,dims=('ecotype',))
+    if len(output_PFTs.lndgrid)>1:
+        vegdata_PFTs.coords['community_names']=xarray.DataArray(landscape_ecotypes,dims=('ecotype',))
+    else:
+        vegdata_PFTs.coords['community_names']=xarray.DataArray(['Gridcell'],dims=('ecotype',))
+
+
     for varname in output_PFTs.variables:
         var=output_PFTs[varname]
         if var.dims == ('time','pft'):
@@ -188,6 +206,25 @@ obsdata_PFT_mappings={'dwarf shrub deciduous':'arctic_deciduous_shrub_dwarf',
                         
 obsdata_defaultPFT_mappings={'dwarf shrub deciduous':'broadleaf_deciduous_boreal_shrub',
                       'dwarf shrub evergreen':'broadleaf_evergreen_shrub',
+                      'forb':'c3_arctic_grass',
+                      'graminoid':'c3_arctic_grass', # **** model has wet and dry graminoids
+                      'lichen':'nonvascular',
+                      'low shrub deciduous':'broadleaf_deciduous_boreal_shrub',
+                      'mixed':'not_vegetated',            # *****
+                      'moss':'nonvascular',
+                      'bryophyte':'nonvascular',
+                        'other':'not_vegetated',          # ***** what to do with this?
+                        'tall shrub deciduous alder':'broadleaf_deciduous_boreal_shrub',
+                        'tall shrub deciduous birch':'broadleaf_deciduous_boreal_shrub', # **** Model is not separating birch and willow
+                        'tall shrub deciduous willow':'broadleaf_deciduous_boreal_shrub', # **** Model is not separating birch and willow
+                        'potential tall shrub deciduous alder':'broadleaf_deciduous_boreal_shrub',
+                        'potential tall shrub deciduous birch':'broadleaf_deciduous_boreal_shrub', # **** Model is not separating birch and willow
+                        'potential tall shrub deciduous willow':'broadleaf_deciduous_boreal_shrub', # **** Model is not separating birch and willow
+                        'potential tall shrub deciduous non-alder':'broadleaf_deciduous_boreal_shrub'
+                        }
+
+obsdata_E3SMPFT_mappings={'dwarf shrub deciduous':'broadleaf_deciduous_boreal_shrub',
+                      'dwarf shrub evergreen':'broadleaf_deciduous_boreal_shrub',
                       'forb':'c3_arctic_grass',
                       'graminoid':'c3_arctic_grass', # **** model has wet and dry graminoids
                       'lichen':'nonvascular',
@@ -378,7 +415,23 @@ def pft_params(paramdata,paramnames):
     return pandas.DataFrame(pdict).set_index('pftname')
     
 def plot_PFT_distributions():
-    subplot(121)
+    subplot(131)
+    names=[]
+    bottom=zeros(len(landscape_ecotypes))
+    for pftnum in range(len(pft_names_default[:17])):
+        pft_pcts=PFT_percents_E3SM.loc[pft_names_default[pftnum]]
+        if (pft_pcts==0).all():
+            continue
+        bar(arange(len(landscape_ecotypes)),pft_pcts,bottom=bottom,facecolor=pft_colors_default[pftnum])
+        bottom=bottom+pft_pcts
+        names.append(' '.join(pft_names_default[pftnum].split('_')).title() )
+
+    xticks(arange(len(landscape_ecotypes)),landscape_ecotypes,rotation=0)
+    title('Default ELM PFTs')
+    l=legend(labels=names,loc=(0.0,1.1),fontsize='small')
+    l.set_draggable(True)
+    
+    subplot(132)
     names=[]
     bottom=zeros(len(landscape_ecotypes))
     for pftnum in range(len(pft_names_default[:17])):
@@ -394,7 +447,7 @@ def plot_PFT_distributions():
     l=legend(labels=names,loc=(0.0,1.1),fontsize='small')
     l.set_draggable(True)
 
-    subplot(122)
+    subplot(133)
     names=[]
     bottom=zeros(len(landscape_ecotypes))
     for pftnum in range(len(pft_names)):

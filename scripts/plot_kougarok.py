@@ -26,7 +26,6 @@ if __name__=='__main__':
     
     columndata=xarray.open_dataset(filename.replace('h1','h0').replace('h2','h0'))
     t_col=array([tt.year + (tt.dayofyr-1)/365 for tt in columndata['time'].data])
-    Tsoil10cm=columndata['TSOI_10CM']
 
     minyear=int(floor(t_col.min()))
     maxyear=int(ceil(t_col.max()))
@@ -65,13 +64,13 @@ if __name__=='__main__':
     meas_NPP_C.rename(index={'potential tall shrub deciduous birch':'potential tall shrub deciduous non-alder'},inplace=True)
     meas_NPP_C.drop('potential tall shrub deciduous willow',level='ELM_PFT',inplace=True)
 
-    def obs_to_defaultPFTs(obsdata):
+    def obs_to_defaultPFTs(obsdata,mapping=obsdata_defaultPFT_mappings):
         # Best way I could figure out how to do this, sorry. Making a multilevel index with the same community and plot levels but new PFTs
-        new_index=pandas.MultiIndex.from_tuples([(x[0][0],x[0][1],x[1]) for x in pandas.MultiIndex.from_product((i.droplevel('ELM_PFT').drop_duplicates().values,unique(list(obsdata_defaultPFT_mappings.values())))).values],names=('Ecotype','PlotID','ELM_PFT')) 
+        new_index=pandas.MultiIndex.from_tuples([(x[0][0],x[0][1],x[1]) for x in pandas.MultiIndex.from_product((obsdata.index.droplevel('ELM_PFT').drop_duplicates().values,unique(list(mapping.values())))).values],names=('Ecotype','PlotID','ELM_PFT')) 
         if isinstance(obsdata,pandas.Series):
             out=pandas.Series(index=new_index,data=0)
             for pft in unique(obsdata.index.get_level_values('ELM_PFT')):
-                out.loc[:,:,obsdata_defaultPFT_mappings[pft]] = out.loc[:,:,obsdata_defaultPFT_mappings[pft]].add( obsdata.loc[:,:,pft].fillna(0.0), fill_value=0.0)
+                out.loc[:,:,mapping[pft]] = out.loc[:,:,mapping[pft]].add( obsdata.loc[:,:,pft].fillna(0.0), fill_value=0.0)
 
         else:
             raise TypeError('Must be a Series')
@@ -83,14 +82,16 @@ if __name__=='__main__':
     plotvars=['leaf','froot','croot','store','stem','cnpp','height','downreg']
     nplots=len(plotvars)
     
-    if 'c3_arctic_grass' in vegdata_PFTs.PFTnames:
-        pfts_inuse=[]
-        for pftnum in range(len(vegdata_PFTs.PFTnames)):
-            pft_pcts=PFT_percents_default.loc[vegdata_PFTs.PFTnames[pftnum].values]
-            if not (pft_pcts==0).all():
-                pfts_inuse.append(pftnum)
-    else:
-        pfts_inuse=vegdata_PFTs.PFT.values[:-1]
+    # if 'c3_arctic_grass' in vegdata_PFTs.PFTnames:
+    #     pfts_inuse=[]
+    #     for pftnum in range(len(vegdata_PFTs.PFTnames)):
+    #         pft_pcts=PFT_percents_default.loc[vegdata_PFTs.PFTnames[pftnum].values]
+    #         if not (pft_pcts==0).all():
+    #             pfts_inuse.append(pftnum)
+    # else:
+    #     pfts_inuse=vegdata_PFTs.PFT.values[:-1]
+    pfts_inuse=vegdata_PFTs['PFT'][(vegdata_PFTs.weights>0).any(dim='ecotype')].data.tolist()
+        
         
     year=xarray.DataArray(array([tt.year for tt in vegdata_PFTs.time.data]),dims='time',coords={'time':vegdata_PFTs.time},name='year')
     annualmax=vegdata_PFTs.groupby(year,squeeze=False).max(dim='time',keep_attrs=True)
@@ -105,7 +106,7 @@ if __name__=='__main__':
         
         fig=figure('Ecotype time series (%s)'%dataname,figsize=(15,10))
         fig.clf()
-        gs=fig.add_gridspec(ncols=nplots,nrows=len(landscape_ecotypes))
+        gs=fig.add_gridspec(ncols=nplots,nrows=len(vegdata_PFTs.ecotype))
         subplot_handles={}
         
         # demand_ratio = xarray.Dataset({'Nratio_unweighted':vegdata_PFTs['SMINN_TO_NPOOL_unweighted']/vegdata_PFTs['PLANT_NDEMAND_unweighted'],
@@ -113,7 +114,7 @@ if __name__=='__main__':
         # demand_ratio_annual = xarray.Dataset({'Nratio_unweighted':annualmean['SMINN_TO_NPOOL_unweighted']/annualmean['PLANT_NDEMAND_unweighted'],
         #                                 'Pratio_unweighted':annualmean['SMINP_TO_PPOOL_unweighted']/annualmean['PLANT_PDEMAND_unweighted']})
 
-        for econum in range(len(landscape_ecotypes)):
+        for econum in range(len(vegdata_PFTs.ecotype)):
             ecotype=landscape_ecotypes[econum]
             subplot_handles[ecotype]={}
             for var in plotvars:
@@ -162,28 +163,27 @@ if __name__=='__main__':
 
     available_plots.append('cumul_rootresp')
     if 'cumul_rootresp' in plots_to_do or 'all' in plots_to_do:
-        if len(vegdata_PFTs.PFT)==17:
-            PFTnum=12
-        else:
-            PFTnum=3
+        Tsoil10cm=columndata['TSOI_10CM']
+
         figure('Temperature and root respiration cumulative (%s)'%dataname);clf()
         
         t2=array([tt.year + (tt.month-.5)/12 for tt in Tsoil10cm.time.data])
-        plot(t2,Tsoil10cm.isel(lndgrid=1)-273.15,'b-')
+        plot(t2,Tsoil10cm.isel(lndgrid=min(1,len(Tsoil10cm.lndgrid)-1))-273.15,'b-')
         plot([0,maxyear],[0.0,0.0],'k--')
         ylabel('Soil temperature (C)')
 
         ax2=twinx()
         t=array([tt.year + (tt.dayofyr-1)/365 for tt in vegdata_PFTs['time'].data])
-        ecotype_num=1
+        ecotype_num=min(1,len(vegdata_PFTs.ecotype)-1)
         startyear=minyear+10
         endyear=minyear+25
         for yr in range(startyear,endyear):
-            growingseason_start=nonzero((t>=yr)&(vegdata_PFTs.sel(PFT=PFTnum,ecotype=ecotype_num)['GPP_unweighted'].values>0))[0][0]
-            growingseason_start_nextyear=nonzero((t>=yr+1)&(vegdata_PFTs.sel(PFT=PFTnum,ecotype=ecotype_num)['GPP_unweighted'].values>0))[0][0]
+            growingseason_start=nonzero((t>=yr)&(vegdata_PFTs.sel(ecotype=ecotype_num)['GPP_unweighted'].values>0).any(axis=1))[0][0]
+            growingseason_start_nextyear=nonzero((t>=yr+1)&(vegdata_PFTs.sel(ecotype=ecotype_num)['GPP_unweighted'].values>0).any(axis=1))[0][0]
             xx=arange(growingseason_start,growingseason_start_nextyear)
             plot_var_PFTs('MR',vegdata_PFTs.isel(time=xx),ecotype_num,cumulative=True,ax=ax2,modfactor=3600*24,units='gC/m2',minyear=yr,ls='--')
             plot_var_PFTs('FROOT_MR',vegdata_PFTs.isel(time=xx),ecotype_num,cumulative=True,ax=ax2,modfactor=3600*24,units='gC/m2',minyear=yr,ls=':')
+            plot_var_PFTs('LEAF_MR',vegdata_PFTs.isel(time=xx),ecotype_num,cumulative=True,ax=ax2,modfactor=3600*24,units='gC/m2',minyear=yr,ls='-.')
             plot_var_PFTs('GPP',vegdata_PFTs.isel(time=xx),ecotype_num,cumulative=True,ax=ax2,modfactor=3600*24,units='gC/m2')
         xlim(startyear,endyear)
 
@@ -252,7 +252,7 @@ if __name__=='__main__':
         
         subplot(212)
         title('Nutrient and moisture limitation')
-        x=arange(6)
+        x=arange(len(columndata.lndgrid))
         w=0.8/3
         Nlim=((columndata['GPP']*columndata['FPG']).groupby(year).sum(dim='time')/columndata['GPP'].groupby(year).sum(dim='time'))
         Plim=((columndata['GPP']*columndata['FPG_P']).groupby(year).sum(dim='time')/columndata['GPP'].groupby(year).sum(dim='time'))
@@ -291,21 +291,21 @@ if __name__=='__main__':
     def plot_mod_bar_stack(x,dat,econum,do_legend=False,**kwargs):
         handles=[]
         bottom=0.0
-        for pftnum in range(len(dat.PFT)):
-            if pftnum==10:
-                val=dat.sel(PFT=10,ecotype=econum).max(dim='time')+dat.sel(PFT=11,ecotype=econum).max(dim='time')
-            elif pftnum==11:
+        for pftnum in dat.PFT:
+            if dat.PFTnames.sel(PFT=pftnum)=='arctic_dry_graminoid':
+                val=dat.sel(PFT=pftnum,ecotype=econum).max(dim='time')+dat.sel(PFT=pftnum+1,ecotype=econum).fillna(0.0).max(dim='time')
+            elif dat.PFTnames.sel(PFT=pftnum)=='arctic_wet_graminoid':
                 continue
             else:
                 val=dat.sel(PFT=pftnum,ecotype=econum).max(dim='time')
             if ~isnan(val):
-                if dat.PFTnames.values[pftnum].startswith('arctic'):
-                    name=dat.PFTnames.values[pftnum][len('arctic_'):]
+                if dat.PFTnames.sel(PFT=pftnum).str.startswith('arctic'):
+                    name=dat.PFTnames.sel(PFT=pftnum).item()[len('arctic_'):]
                 else:
-                    name=dat.PFTnames.values[pftnum]
+                    name=dat.PFTnames.sel(PFT=pftnum).item()
                 if name=='dry_graminoid':
                     name='graminoid'
-                handles.append(bar(x,val,bottom=bottom,facecolor=dat.PFTcolors.values[pftnum],label=name,**kwargs))
+                handles.append(bar(x,val,bottom=bottom,facecolor=dat.PFTcolors.sel(PFT=pftnum).item(),label=name,**kwargs))
                 bottom=bottom+val
         return handles
         
@@ -324,7 +324,8 @@ if __name__=='__main__':
                 valstd=nan
 
             if ~isnan(val):
-                bar(x,val,bottom=bottom,facecolor=pft_colors[(pft_names.index(obsdata_PFT_mappings[pft]))],yerr=valstd,**kwargs)
+                bar(x,val,bottom=bottom,facecolor=pft_colors[(pft_names.index(obsdata_PFT_mappings[pft]))],**kwargs)
+                errorbar(x+rand()*0.25,bottom+val,yerr=valstd,fmt='none',color=pft_colors[(pft_names.index(obsdata_PFT_mappings[pft]))])
                 bottom=bottom+val
 
 
@@ -332,11 +333,14 @@ if __name__=='__main__':
     available_plots.append('biomass')    
     if 'biomass' in plots_to_do or 'all' in plots_to_do:
         
-        barfig=figure('Biomass comparison by ecotype (%s)'%dataname,figsize=(15,8));clf()
-        for econum in range(6):
+        barfig=figure('Biomass comparison by ecotype (%s)'%dataname,figsize=(10,6));clf()
+        for econum in range(len(vegdata_PFTs.ecotype)):
             names=[]
             x=0.0
-            ax=subplot(2,3,econum+1)
+            if len(vegdata_PFTs.ecotype)>1:
+                ax=subplot(2,3,econum+1)
+            else:
+                ax=subplot(1,1,1)
 
             h=plot_mod_bar_stack(x+0.4,get_var_PFTs('LEAFC',data_to_plot),econum,width=0.4,hatch='//')
             plot_obs_bar_stack(x,meas_leaf_C.add(meas_nonvasc_C,fill_value=0.0) ,econum,width=0.4)
@@ -377,7 +381,7 @@ if __name__=='__main__':
             if name == 'Dry Graminoid':
                 name = 'Graminoid'
             handles.append(Rectangle([0,0],0,0,facecolor=data_to_plot.PFTcolors.values[pftnum],label=name ))
-        l=barfig.axes[1].legend(handles=handles,fontsize='small',ncol=2)
+        l=barfig.axes[min(1,len(barfig.axes)-1)].legend(handles=handles,fontsize='small',ncol=2)
         l.set_draggable(True)
 
         tight_layout()
@@ -424,37 +428,41 @@ if __name__=='__main__':
                 
                 vals=get_var_PFTs('FROOTC',data_to_plot,weight_area=not per_area).max(dim='time').sel(PFT=pftnum)
                 h=bar(arange(6)/6,vals,bottom=bottom,width=w,facecolor='brown',label='Fine root',hatch='//')
-                bottom=bottom+vals.fillna(0)
+                bottom=bottom+vals.fillna(0).data
                 handles.append(h)
                 
                 vals=get_var_PFTs(['LIVECROOTC','DEADCROOTC'],data_to_plot,weight_area=not per_area).mean(dim='time').sel(PFT=pftnum)
                 h=bar(arange(6)/6,vals,bottom=bottom,width=w,facecolor='orange',label='Coarse root',hatch='//')
-                bottom=bottom+vals.fillna(0)
+                bottom=bottom+vals.fillna(0).data
                 handles.append(h)
                 
                 vals=get_var_PFTs('STORVEGC',data_to_plot,weight_area=not per_area).mean(dim='time').sel(PFT=pftnum)
                 h=bar(arange(6)/6,vals,bottom=bottom,width=w,facecolor='yellow',label='Storage',hatch='//')
-                bottom=bottom+vals.fillna(0)
+                bottom=bottom+vals.fillna(0).data
                 handles.append(h)
                 # bar(arange(6)/6+w,meas_rhizome_C)
                 
                 vals=get_var_PFTs(['LIVESTEMC','DEADSTEMC'],data_to_plot,weight_area=not per_area).mean(dim='time').sel(PFT=pftnum)
                 h=bar(arange(6)/6,vals,bottom=bottom,width=w,facecolor='blue',label='Stem',hatch='//')
-                bottom=bottom+vals.fillna(0)
+                bottom=bottom+vals.fillna(0).data
                 handles.append(h)
                 
                 vals=get_var_PFTs('LEAFC',data_to_plot,weight_area=not per_area).max(dim='time').sel(PFT=pftnum)
                 h=bar(arange(6)/6,vals,bottom=bottom,width=w,facecolor='green',label='Leaf',hatch='//')
-                bottom=bottom+vals.fillna(0)
+                bottom=bottom+vals.fillna(0).data
                 handles.append(h)  
 
                 
             
             if 'c3_arctic_grass' in data_to_plot.PFTnames and use_pooled_default_PFTs:
-                obsdata={'leaf':obs_to_defaultPFTs(meas_leaf_C),
-                         'rhizome':obs_to_defaultPFTs(meas_rhizome_C),
-                         'stem':obs_to_defaultPFTs(meas_stem_C),
-                         'nonvasc':obs_to_defaultPFTs(meas_nonvasc_C)}
+                if 9 not in pfts_inuse:
+                    mapping=obsdata_E3SMPFT_mappings
+                else:
+                    mapping=obsdata_defaultPFT_mappings
+                obsdata={'leaf':obs_to_defaultPFTs(meas_leaf_C,mapping),
+                         'rhizome':obs_to_defaultPFTs(meas_rhizome_C,mapping),
+                         'stem':obs_to_defaultPFTs(meas_stem_C,mapping),
+                         'nonvasc':obs_to_defaultPFTs(meas_nonvasc_C,mapping)}
             else:
                 obsdata={'leaf':meas_leaf_C,
                          'rhizome':meas_rhizome_C,
@@ -509,26 +517,27 @@ if __name__=='__main__':
 
 
             handles.append(h_nonvasc)
-            l=gcf().axes[3].legend(fontsize='small',ncol=2,handles=handles)
+            l=gcf().axes[0].legend(fontsize='small',ncol=2,handles=handles)
             l.set_draggable(True)
 
             tight_layout()
 
-        barfig_PFT=figure('Biomass comparison by PFT (%s)'%dataname,figsize=(15,8));clf()
+        barfig_PFT=figure('Biomass comparison by PFT (%s)'%dataname,figsize=(10,6));clf()
         plot_pft_biomass_bars(per_area=False,use_pooled_default_PFTs=True)
 
-        barfig_PFT_perarea=figure('Biomass comparison per area of each PFT (%s)'%dataname,figsize=(15,8));clf()
+        barfig_PFT_perarea=figure('Biomass comparison per area of each PFT (%s)'%dataname,figsize=(10,6));clf()
         plot_pft_biomass_bars(per_area=True,use_pooled_default_PFTs=True)
         
-        figure('NPP (%s)'%dataname,figsize=(15,8));clf()
-        for econum in range(6):
-            subplot(2,3,econum+1)
+        f,a=subplots(num='NPP (%s)'%dataname,figsize=(15,8),clear=True,nrows=2,ncols=3)
+        for econum in range(len(data_to_plot.ecotype)):
+            ax=a.ravel()[econum]
             x=arange(len(pfts_inuse))
             w=0.8/3
-            bar(x,get_var_PFTs('NPP',data_to_plot.sel(PFT=pfts_inuse)).sel(ecotype=econum).mean(dim='time').values*3600*24*365,color=data_to_plot.PFTcolors[pfts_inuse].values,width=w,hatch='//')
-            bar(x+w,get_var_PFTs('AGNPP',data_to_plot.sel(PFT=pfts_inuse)).sel(ecotype=econum).mean(dim='time').values*3600*24*365,color=data_to_plot.PFTcolors[pfts_inuse].values,width=w,hatch='/')
+            ax.bar(x,get_var_PFTs('NPP',data_to_plot.sel(PFT=pfts_inuse)).sel(ecotype=econum).mean(dim='time').values*3600*24*365,color=data_to_plot.PFTcolors[pfts_inuse].values,width=w,hatch='//')
+            ax.bar(x+w,get_var_PFTs('AGNPP',data_to_plot.sel(PFT=pfts_inuse)).sel(ecotype=econum).mean(dim='time').values*3600*24*365,color=data_to_plot.PFTcolors[pfts_inuse].values,width=w,hatch='/')
             
-            xticks(x,[prettify_pft_name(name) for name in data_to_plot.PFTnames.values[pfts_inuse]],rotation=30,ha='right')
+            ax.set_xticks(x)
+            ax.set_xticklabels([prettify_pft_name(name) for name in data_to_plot.PFTnames.values[pfts_inuse]],rotation=30,ha='right')
         
         # 
         # w=0.8/6/3
@@ -622,7 +631,7 @@ if __name__=='__main__':
         figure('Height (%s)'%dataname,figsize=(13,7));clf()
 
 
-        for econum in range(6):
+        for econum in range(len(data_to_plot.ecotype)):
             names=[]
             x=0.0
             ax=subplot(2,3,econum+1)
@@ -739,7 +748,7 @@ if __name__=='__main__':
     if 'vcmax' in plots_to_do or 'all' in plots_to_do:
         
         figure('VCMAX (%s)'%dataname);clf()
-        for n in range(6):
+        for n in range(len(vegdata_PFTs.ecotype)):
             ax=subplot(3,2,n+1)
             plot_var_PFTs('VCMAX25TOP',vegdata_PFTs.sel(PFT=pfts_inuse),weight_area=False,ecotype_num=n,maxyear=maxyear,minyear=maxyear-1)
             title(ecotype_names_list[n])
