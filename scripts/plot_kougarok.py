@@ -1,25 +1,29 @@
 from kougarok_plotting import *
-
+from argparse import ArgumentParser
 
 if __name__=='__main__':
     
-    import sys
-    if len(sys.argv)>=2:
-        filename=sys.argv[1]
-    else:
-        raise RuntimeError('Must supply data file name')
+    parser = ArgumentParser()
+    parser.add_argument('filename',help='netCDF file to plot')
+    parser.add_argument('--all_timeseries',action='store_true')
+    parser.add_argument('--cumul_rootresp',action='store_true')
+    parser.add_argument('--SOMstocks',action='store_true')
+    parser.add_argument('--Nfix',action='store_true')
+    parser.add_argument('--PFTdist',action='store_true')
+    parser.add_argument('--biomass',action='store_true')
+    parser.add_argument('--height',action='store_true')
+    parser.add_argument('--AG_BG',action='store_true')
+    parser.add_argument('--nonvasc',action='store_true')
+    parser.add_argument('--vcmax',action='store_true')
+    parser.add_argument('--sitemap',action='store_true')
+    parser.add_argument('--rootprofile',action='store_true')
+    parser.add_argument('--all',action='store_true')
+    parser.add_argument('--save_figs',help='Directory to save figures')
 
-    print_options=False
-    if 'all' in sys.argv:
-        plots_to_do = ['all']
-    elif len(sys.argv)==2:
-        plots_to_do=[]
-        print_options=True
-    else:
-        plots_to_do = sys.argv[2:]
+    options = parser.parse_args()
+
+    filename=options.filename
         
-    available_plots=[]
-
     import os
     dataname=os.path.basename(filename)
     vegdata_PFTs=read_pftfile(filename,maxyear=None)
@@ -101,8 +105,7 @@ if __name__=='__main__':
     annualmean['year']=vegdata_PFTs['time'].groupby(year).first()
     annualmean=annualmean.rename({'year':'time'})
         
-    available_plots.append('all_timeseries')
-    if 'all_timeseries' in plots_to_do or 'all' in plots_to_do:
+    if options.all_timeseries or options.all:
         
         fig=figure('Ecotype time series (%s)'%dataname,figsize=(15,10))
         fig.clf()
@@ -161,8 +164,7 @@ if __name__=='__main__':
         subplots_adjust(hspace=0.8)
         subplot_handles[landscape_ecotypes[0]]['froot'].legend(loc=(-1,1.2),ncol=7,fontsize='small',handles=list(array(subplot_handles[landscape_ecotypes[0]]['froot'].lines)[pfts_inuse]))
 
-    available_plots.append('cumul_rootresp')
-    if 'cumul_rootresp' in plots_to_do or 'all' in plots_to_do:
+    if options.cumul_rootresp or options.all:
         Tsoil10cm=columndata['TSOI_10CM']
 
         figure('Temperature and root respiration cumulative (%s)'%dataname);clf()
@@ -189,8 +191,7 @@ if __name__=='__main__':
 
         tight_layout()
     
-    available_plots.append('SOMstocks')
-    if 'SOMstocks' in plots_to_do or 'all' in plots_to_do:
+    if options.SOMstocks or options.all:
         
         barplots=True
         figure('SOM stocks (%s)'%dataname,figsize=(10,5));clf()
@@ -233,8 +234,7 @@ if __name__=='__main__':
 
         tight_layout()
 
-    available_plots.append('Nfix')
-    if 'Nfix' in plots_to_do or 'all' in plots_to_do:
+    if options.Nfix or options.all:
         
         figure('N fixation(%s)'%dataname,figsize=(6.4,6.7));clf()
         subplot(211)
@@ -280,8 +280,7 @@ if __name__=='__main__':
 
     data_to_plot=last_100_years
 
-    available_plots.append('PFTdist')
-    if 'PFTdist' in plots_to_do or 'all' in plots_to_do:
+    if options.PFTdist or options.all:
         
         figure('PFT distributions',figsize=(9,5));clf()
         plot_PFT_distributions()
@@ -329,18 +328,18 @@ if __name__=='__main__':
                 bottom=bottom+val
 
 
-    
-    available_plots.append('biomass')    
-    if 'biomass' in plots_to_do or 'all' in plots_to_do:
+    if options.biomass or options.all: 
         
-        barfig=figure('Biomass comparison by ecotype (%s)'%dataname,figsize=(10,6));clf()
+        barfig=figure('Biomass comparison by ecotype (%s)'%dataname,figsize=(12,6),clear=True);
+        if len(vegdata_PFTs.ecotype)>1:
+            axs=barfig.subplots(2,3)
+        else:
+            axs=barfig.subplots(1,1)
+        
         for econum in range(len(vegdata_PFTs.ecotype)):
             names=[]
             x=0.0
-            if len(vegdata_PFTs.ecotype)>1:
-                ax=subplot(2,3,econum+1)
-            else:
-                ax=subplot(1,1,1)
+            sca(axs.ravel()[econum])
 
             h=plot_mod_bar_stack(x+0.4,get_var_PFTs('LEAFC',data_to_plot),econum,width=0.4,hatch='//')
             plot_obs_bar_stack(x,meas_leaf_C.add(meas_nonvasc_C,fill_value=0.0) ,econum,width=0.4)
@@ -381,7 +380,7 @@ if __name__=='__main__':
             if name == 'Dry Graminoid':
                 name = 'Graminoid'
             handles.append(Rectangle([0,0],0,0,facecolor=data_to_plot.PFTcolors.values[pftnum],label=name ))
-        l=barfig.axes[min(1,len(barfig.axes)-1)].legend(handles=handles,fontsize='small',ncol=2)
+        l=barfig.axes[0].legend(handles=handles,fontsize='small',ncol=2)
         l.set_draggable(True)
 
         tight_layout()
@@ -394,20 +393,21 @@ if __name__=='__main__':
             if 'c3_arctic_grass' in data_to_plot.PFTnames and use_pooled_default_PFTs:
                 ncols=len(pfts_inuse)
                 nrows=1
+                axs=gcf().subplots(ncols=ncols,nrows=nrows).ravel()
                 for n in range(len(pfts_inuse[1:])):
-                    subplot(nrows,ncols,n+1)
-                    title(prettify_pft_name(pft_names_default[pfts_inuse[n+1]]))
-                    ylabel('Biomass (gC m$^{-2}$)')
-                    xticks(arange(6)/6,landscape_ecotypes)
-                subplot(nrows,ncols,n+2)
+                    axs[n].set_title(prettify_pft_name(pft_names_default[pfts_inuse[n+1]]))
+                    axs[n].set_ylabel('Biomass (gC m$^{-2}$)')
+                    axs[n].xticks(arange(6)/6,landscape_ecotypes)
+                sca(axs[n+1])
                 title('Nonvascular')
                 ylabel('Biomass (gC m$^{-2}$)')
                 xticks(arange(6)/6,landscape_ecotypes)
             else:
                 nrows=2
                 ncols=5
+                axs=gcf().subplots(ncols=ncols,nrows=nrows).ravel()
                 for n in range(1,11):
-                    subplot(2,5,n)
+                    sca(axs[n-1])
                     title(prettify_pft_name(pft_names[n]))
                     ylabel('Biomass (gC m$^{-2}$)')
                     xticks(arange(6)/6,landscape_ecotypes)
@@ -421,7 +421,7 @@ if __name__=='__main__':
                 else:
                     n=pftnum
 
-                subplot(nrows,ncols,n)
+                sca(axs[n-1])
                 bottom=zeros(6)
                 bottom_obs=zeros(6)
                 handles=[]
@@ -517,25 +517,25 @@ if __name__=='__main__':
 
 
             handles.append(h_nonvasc)
-            l=gcf().axes[0].legend(fontsize='small',ncol=2,handles=handles)
+            l=gcf().axes[0].legend(fontsize='small',ncol=1,handles=handles)
             l.set_draggable(True)
 
             tight_layout()
 
-        barfig_PFT=figure('Biomass comparison by PFT (%s)'%dataname,figsize=(10,6));clf()
+        barfig_PFT=figure('Biomass comparison by PFT (%s)'%dataname,figsize=(12,6),clear=True);
         plot_pft_biomass_bars(per_area=False,use_pooled_default_PFTs=True)
 
-        barfig_PFT_perarea=figure('Biomass comparison per area of each PFT (%s)'%dataname,figsize=(10,6));clf()
+        barfig_PFT_perarea=figure('Biomass comparison per area of each PFT (%s)'%dataname,figsize=(12,6),clear=True);
         plot_pft_biomass_bars(per_area=True,use_pooled_default_PFTs=True)
         
-        f,a=subplots(num='NPP (%s)'%dataname,figsize=(15,8),clear=True,nrows=2,ncols=3)
+        f,a=subplots(num='NPP (%s)'%dataname,figsize=(12,6),clear=True,nrows=2,ncols=3)
         for econum in range(len(data_to_plot.ecotype)):
             ax=a.ravel()[econum]
             x=arange(len(pfts_inuse))
             w=0.8/3
             ax.bar(x,get_var_PFTs('NPP',data_to_plot.sel(PFT=pfts_inuse)).sel(ecotype=econum).mean(dim='time').values*3600*24*365,color=data_to_plot.PFTcolors[pfts_inuse].values,width=w,hatch='//')
             ax.bar(x+w,get_var_PFTs('AGNPP',data_to_plot.sel(PFT=pfts_inuse)).sel(ecotype=econum).mean(dim='time').values*3600*24*365,color=data_to_plot.PFTcolors[pfts_inuse].values,width=w,hatch='/')
-            
+            ax.set_title('%s NPP'%ecotype_names_list[econum])
             ax.set_xticks(x)
             ax.set_xticklabels([prettify_pft_name(name) for name in data_to_plot.PFTnames.values[pfts_inuse]],rotation=30,ha='right')
         
@@ -624,9 +624,8 @@ if __name__=='__main__':
         # l.set_draggable(True)
         # 
         # tight_layout()
-    
-    available_plots.append('height')
-    if 'height' in plots_to_do or 'all' in plots_to_do:
+   
+    if options.height or options.all:
         
         figure('Height (%s)'%dataname,figsize=(13,7));clf()
 
@@ -658,9 +657,8 @@ if __name__=='__main__':
             ylabel('Height (m)')
             title(ecotype_names_list[econum])
         tight_layout()
-    
-    available_plots.append('AG_BG')
-    if 'AG_BG' in plots_to_do or 'all' in plots_to_do:
+   
+    if options.AG_BG or options.all:
         
         figure('Aboveground-belowground (%s)'%dataname,figsize=(10.8,4.8));clf()
 
@@ -688,9 +686,8 @@ if __name__=='__main__':
         ylim(0,100)
         legend(fontsize='large')
         tight_layout()
-    
-    available_plots.append('nonvasc')
-    if 'nonvasc' in plots_to_do or 'all' in plots_to_do:
+   
+    if options.nonvasc or options.all:
         
         figure('Non-vascular (%s)'%dataname);clf()
         meas_lichen_BM=Koug_meas_biomass['Nonvascular_gperm2'][:,:,'lichen']
@@ -743,9 +740,8 @@ if __name__=='__main__':
         l.set_draggable(True)
         xticks(arange(len(landscape_ecotypes))+w,[ecotype_names[name] for name in landscape_ecotypes] ,rotation=45,ha='right')
         tight_layout()
-        
-    available_plots.append('vcmax')
-    if 'vcmax' in plots_to_do or 'all' in plots_to_do:
+       
+    if options.vcmax or options.all:
         
         figure('VCMAX (%s)'%dataname);clf()
         for n in range(len(vegdata_PFTs.ecotype)):
@@ -766,12 +762,10 @@ if __name__=='__main__':
         
 
 
-    import cartopy.crs as ccrs
-    import cartopy
 
-    
-    available_plots.append('sitemap')
-    if 'sitemap' in plots_to_do or 'all' in plots_to_do:
+    if options.sitemap or options.all: 
+        import cartopy.crs as ccrs
+        import cartopy
         figure('Site location');clf()
         ax=subplot(111,projection=ccrs.Miller(central_longitude=-155))
         ax.set_extent((-175,-138,50,75)) 
@@ -780,8 +774,7 @@ if __name__=='__main__':
         ax.add_feature(cartopy.feature.BORDERS.with_scale('50m'))
         ax.scatter(-164.82,65.16,marker='*',s=50,c='g',transform=ccrs.Geodetic())
 
-    available_plots.append('rootprofile')
-    if 'rootprofile' in plots_to_do or 'all' in plots_to_do:
+    if options.rootprofile or options.all:
         fig=figure('Root profile');clf()
         
         depths=columndata['levdcmp']
@@ -841,15 +834,11 @@ if __name__=='__main__':
         gcf().axes[0].legend(fontsize='small',ncol=1,
             labels=['Nonvascular (beta=0.0)','Evergreen (beta=0.964)','Deciduous (beta=0.914)','Max active layer thickness','Bedrock depth','Perched WT depth'])
         tight_layout()
-        
+   
+
+    if options.save_figs != None:
+        save_all_figs(options.save_figs)
+
     show()
 
-    for p in plots_to_do:
-        if p not in available_plots+['all']:
-            print_options=True
-            print('WARNING: requested plot %s is not defined and was not plotted.'%p)
     
-    if print_options:
-        print('Available plots are:')
-        for p in available_plots:
-            print(p)
