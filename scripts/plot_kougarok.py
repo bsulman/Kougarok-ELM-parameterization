@@ -743,14 +743,14 @@ if __name__=='__main__':
        
     if options.vcmax or options.all:
         
-        figure('VCMAX (%s)'%dataname);clf()
+        f,axs=subplots(nrows=3,ncols=2,num='VCMAX (%s)'%dataname,clear=True)
         for n in range(len(vegdata_PFTs.ecotype)):
-            ax=subplot(3,2,n+1)
+            sca(axs.ravel()[n])
             plot_var_PFTs('VCMAX25TOP',vegdata_PFTs.sel(PFT=pfts_inuse),weight_area=False,ecotype_num=n,maxyear=maxyear,minyear=maxyear-1)
             title(ecotype_names_list[n])
             ylabel('Vcmax(25C)\n(umol m$^{-2}$ s$^{-1}$)')
-        legend(fontsize='small',ncol=1,loc=(1.0,1.0))
-        tight_layout()
+        legend(fontsize='small',ncol=1)
+        # tight_layout()
         
         # x=arange(len(pfts_inuse))
         # bar(x,get_var_PFTs('VCMAX25TOP',data_to_plot.sel(PFT=pfts_inuse),weight_area=False).max(dim='time').mean(dim='ecotype').values,color=data_to_plot.PFTcolors[pfts_inuse].values)
