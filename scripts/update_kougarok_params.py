@@ -1,5 +1,6 @@
 import xarray
 import numpy
+from numpy import zeros
 
 basedir='..'
 params_newfengming=xarray.open_dataset(basedir+'/param_files/clm_params_newpfts_c180524_orig.nc')
@@ -156,9 +157,9 @@ if __name__=='__main__':
     froot_leaf_TT=froot_leaf('TT','dwarf shrub evergreen')
     froot_leaf_NAMC=froot_leaf('NAMC','dwarf shrub evergreen')
     # printnote('Setting froot_leaf for evergreen species to include rhizomes, and weighting root turnover by rhizome biomass and turnover rates')
-    printnote('Treating rhizomes as ELM storage C and N pool, not as roots')
-    printnote('Assuming a rhizome (storage) turnover of 5 years based on dwarf evergreen shrub value from Table 5')
-    printnote('In the future, this should be a PFT-specific parameter')
+    # printnote('Treating rhizomes as ELM storage C and N pool, not as roots')
+    # printnote('Assuming a rhizome (storage) turnover of 5 years based on dwarf evergreen shrub value from Table 5')
+    # printnote('In the future, this should be a PFT-specific parameter')
     change_universal_param('fstor2tran',1.0/4.0)
 
     leaflong=(Koug_meas_biomass['LeafBiomass_gperm2']/Koug_meas_biomass['LeafNPP_gperm2peryr'])[:,'dwarf shrub evergreen'].mean()
@@ -258,8 +259,6 @@ if __name__=='__main__':
 
 
     # Graminoid
-    pftwet='arctic_wet_graminoid'
-    pftdry='arctic_dry_graminoid'
     froot_leaf_TT=froot_leaf('TT','graminoid')
     froot_leaf_TTWBT=froot_leaf('TTWBT','graminoid')
     froot_leaf_WBT=froot_leaf('WBT','graminoid')
@@ -282,40 +281,43 @@ if __name__=='__main__':
     leaflong=2.0
     # change_param('froot_leaf',pftdry,froot_leaf_gram*leaflong/rootlong*1.2)
     # change_param('froot_leaf',pftwet,froot_leaf_gram*leaflong/rootlong*1.2)
-    change_param('froot_leaf',pftwet,4.0)
-    change_param('froot_leaf',pftdry,4.0)
+    params['lwtop_pfts']=xarray.DataArray(name='lwtop_pfts',dims='pft',data=zeros(len(pft_names))+params['lwtop_ann'].values,attrs={'units':'unitless','long_name':'Live wood turnover proportion (PFT-specific)'})
+    for pft in ['arctic_wet_graminoid','arctic_dry_graminoid']:
+        change_param('froot_leaf',pft,4.0)
 
+        # printnote('Graminoid SLA is much higher in WBT than other sites. What to do about that?')
+        change_param('slatop',pft,meas_SLA[:,'graminoid'].mean())
+        change_param('leafcn',pft,obs_leafCN[:,'graminoid'].mean())
+        printnote('Setting graminoid root C:N based on updated Kougarok chemistry')
+        change_param('frootcn',pft,75.0)
 
-    printnote('Graminoid SLA is much higher in WBT than other sites. What to do about that?')
-    change_param('slatop',pftwet,meas_SLA[:,'graminoid'].mean())
-    change_param('slatop',pftdry,meas_SLA[:,'graminoid'].mean())
-    change_param('leafcn',pftdry,obs_leafCN[:,'graminoid'].mean())
-    change_param('leafcn',pftwet,obs_leafCN[:,'graminoid'].mean())
-    printnote('Setting graminoid root C:N based on updated Kougarok chemistry')
-    change_param('frootcn',pftdry,75.0)
-    change_param('frootcn',pftwet,75.0)
+        #frootfrac_graminoid=(froot_leaf_TT+froot_leaf_TTWBT)/(rhizome_leaf_TT+rhizome_leaf_TTWBT+froot_leaf_TT+froot_leaf_TTWBT)
+        #change_param('froot_long',pftwet,3.13*frootfrac_graminoid + rhizome_lifetime*(1-frootfrac_graminoid))
+        #change_param('froot_long',pftdry,3.13*frootfrac_graminoid + rhizome_lifetime*(1-frootfrac_graminoid))
+        change_param('froot_long',pft,rootlong)
 
-    #frootfrac_graminoid=(froot_leaf_TT+froot_leaf_TTWBT)/(rhizome_leaf_TT+rhizome_leaf_TTWBT+froot_leaf_TT+froot_leaf_TTWBT)
-    #change_param('froot_long',pftwet,3.13*frootfrac_graminoid + rhizome_lifetime*(1-frootfrac_graminoid))
-    #change_param('froot_long',pftdry,3.13*frootfrac_graminoid + rhizome_lifetime*(1-frootfrac_graminoid))
-    change_param('froot_long',pftwet,rootlong)
-    change_param('froot_long',pftdry,rootlong)
+        change_param('fcur',pft,fcur_pfts[:,'graminoid'].mean() )
 
-    change_param('fcur',pftwet,fcur_pfts[:,'graminoid'].mean() )
-    change_param('fcur',pftdry,fcur_pfts[:,'graminoid'].mean() )
+        printnote('According to Verity, grasses act more like evergreen plants. Do not drop leaves/roots every year')
+        change_param('season_decid',pft,0)
+        change_param('evergreen',pft,1)
 
-    printnote('According to Verity, grasses act more like evergreen plants. Do not drop leaves/roots every year')
-    change_param('season_decid',pftwet,0)
-    change_param('season_decid',pftdry,0)
-    change_param('evergreen',pftwet,1)
-    change_param('evergreen',pftdry,1)
+        change_param('leaf_long',pft,leaflong)
 
-    change_param('leaf_long',pftwet,leaflong)
-    change_param('leaf_long',pftdry,leaflong)
+        printnote('VCmax for graminoids seems too high with updated parameters. Reducing it by about 50%')
+        change_param('flnr',pft,0.09)
 
-    printnote('VCmax for graminoids seems too high with updated parameters. Reducing it by about 50%')
-    change_param('flnr',pftwet,0.09)
-    change_param('flnr',pftdry,0.09)
+        ## printnote('Making graminoids into woody plants to allow rhizomes. Setting with very low stem and very high live wood frac')
+        ## Update: this doesn't work. Making them woody plants without deadwood stems messes up height calculations etc
+        ## change_param('woody',pft,1)
+        ## change_param('croot_stem',pft,10.0)  # Actual allocation to Croots is leaf_alloc*stem_leaf*croot_stem
+        ## change_param('flivewd',pft,0.99) # Live wood fraction
+        ## change_param('lwtop_pfts',pft,0.0) # No turnover to dead wood for graminoids    
+        ## change_param('deadwdcn',pft,500)   # If this is zero the model crashes on initialization
+
+        # Updated strategy: Changed code so for non-woody plants stem_leaf is interpreted as rhizome allocation and sent to livecrootc 
+        change_param('stem_leaf',pft,0.1)
+        change_param('livewdcn',pft,50)   # If this is zero the model crashes on initialization
 
     # Forb
     # Probably not enough data to constrain roots (no site with high forb coverage). Make same as graminoids?
@@ -323,13 +325,14 @@ if __name__=='__main__':
     printnote('Not enough forb biomass at any site to estimate associated root biomass. Assume the ratio is the same as grasses?')
     printnote('No SLA measurements for forbs. Current forb value is {forbsla:1.2g}'.format(forbsla=params['slatop'].values[pft_names.index('arctic_forb')])) 
     printnote('Should forbs be evergreen or deciduous?')
+    printnote('Should forbs be given quasi-woody rhizomes like grasses?')
 
     pft='arctic_forb' 
     change_param('leafcn',pft,obs_leafCN[:,'forb'].mean())
     change_param('frootcn',pft,obs_frootCN)
  
     change_param('fcur',pft,fcur_pfts[:,'forb'].mean())
-    change_param('froot_leaf',pft,3.0)
+    change_param('froot_leaf',pft,1.5)
     change_param('flnr',pft,0.2)
 
     # Lichen
@@ -378,7 +381,6 @@ if __name__=='__main__':
     params['dormant_mr_factor']=xarray.DataArray(name='dormant_mr_factor',dims='allpfts',data=[dormant_mr_factor],attrs={'units':'unitless','long_name':'Dormant maintenance respiration multiplication factor'})
 
     # Set up N fixation params
-    from numpy import zeros
     params['Nfix_NPP_c1']=xarray.DataArray(name='Nfix_NPP_c1',dims='pft',data=zeros(len(pft_names))+1.8,attrs={'units':'gN/m2/yr','long_name':'Pre-exponential factor in NPP-Nfix equation'})
     params['Nfix_NPP_c2']=xarray.DataArray(name='Nfix_NPP_c2',dims='pft',data=zeros(len(pft_names))+0.003,attrs={'units':'gN/m2/yr','long_name':'Exponential factor in NPP-Nfix equation'})
     change_param('Nfix_NPP_c1','arctic_deciduous_shrub_alder',10.0)

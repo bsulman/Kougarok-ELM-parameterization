@@ -334,7 +334,7 @@ if __name__=='__main__':
         if len(vegdata_PFTs.ecotype)>1:
             axs=barfig.subplots(2,3)
         else:
-            axs=barfig.subplots(1,1)
+            axs=barfig.subplots(1,1,squeeze=False)
         
         for econum in range(len(vegdata_PFTs.ecotype)):
             names=[]
@@ -393,11 +393,12 @@ if __name__=='__main__':
             if 'c3_arctic_grass' in data_to_plot.PFTnames and use_pooled_default_PFTs:
                 ncols=len(pfts_inuse)
                 nrows=1
-                axs=gcf().subplots(ncols=ncols,nrows=nrows).ravel()
+                axs=gcf().subplots(ncols=ncols,nrows=nrows,squeeze=False).ravel()
                 for n in range(len(pfts_inuse[1:])):
                     axs[n].set_title(prettify_pft_name(pft_names_default[pfts_inuse[n+1]]))
                     axs[n].set_ylabel('Biomass (gC m$^{-2}$)')
-                    axs[n].xticks(arange(6)/6,landscape_ecotypes)
+                    axs[n].set_xticks(arange(6)/6)
+                    axs[n].set_xticklabels(landscape_ecotypes)
                 sca(axs[n+1])
                 title('Nonvascular')
                 ylabel('Biomass (gC m$^{-2}$)')

@@ -35,7 +35,7 @@ ${cmd} --caseidprefix Kougarok_daymet_E3SMpfts_communities \
 
 # Run 4: Kougarok transect surface data and Arctic PFTs
 # Local domain file, local surface file with new PFTs and new PFT (obs) distributions and parameters
-${cmd} --caseidprefix Kougarok_daymet_Arcticpfts \
+${cmd} --caseidprefix Kougarok_daymet_Arcticpfts_gramrhizomes \
 --var_soilthickness --np=6 \
 --maxpatch_pft=12 \
 --nopftdyn \
