@@ -191,7 +191,7 @@ if __name__=='__main__':
     change_param('leafcn',pft,obs_leafCN[:,'dwarf shrub evergreen'].mean())
     # change_param('frootcn',pft,(obs_frootCN*froot_leaf_NAMC + obs_rhizomeCN[:,'dwarf shrub evergreen'].mean()*rhizome_leaf_NAMC)/(froot_leaf_NAMC+rhizome_leaf_NAMC))
     change_param('frootcn',pft,obs_frootCN)
-    change_param('croot_stem',pft,0.1)
+    change_param('croot_stem',pft,0.5)
     change_param('stem_leaf',pft,0.1)
 
     change_param('lflitcn',pft,56.0)
