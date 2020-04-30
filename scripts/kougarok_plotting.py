@@ -21,6 +21,13 @@ def prettify_pft_name(name):
     else:
         pretty_name=name
     pretty_name = ' '.join(pretty_name.split('_')).title()
+    if pretty_name == "Dry Graminoid":
+        pretty_name = "Graminoid"
+    if len(pretty_name.split())>=2 and pretty_name.split()[-2]=='Shrub':
+        l=pretty_name.split()
+        end=l.pop(-1)
+        l.insert(-1,end)
+        pretty_name=' '.join(l)
     return pretty_name
 
 def get_time(data):
@@ -73,50 +80,51 @@ PFT_percents_default=pandas.DataFrame(data=surfdata_default.PCT_NAT_PFT.values.s
 surfdata_E3SM=xarray.open_dataset('../param_files/surfdata_Kougarok_downscaled_PFTs_soildepths.nc')
 PFT_percents_E3SM=pandas.DataFrame(data=surfdata_E3SM.PCT_NAT_PFT.values.squeeze(),index=pft_names_default[:17],columns=landscape_ecotypes)
 
-def read_pftfile(filename,maxyear=None):
-    output_PFTs=xarray.open_dataset(filename)
-    if maxyear is not None:
-        output_PFTs=output_PFTs.sel(time=array([xx.year for xx in output_PFTs.time.values])<=maxyear)
+def read_pftfile(filename,maxyear=None,decode_times=True):
+    with xarray.open_dataset(filename,decode_times=decode_times) as output_PFTs:
+        if maxyear is not None:
+            output_PFTs=output_PFTs.sel(time=array([xx.year for xx in output_PFTs.time.values])<=maxyear)
 
-    pft_mask=output_PFTs.pfts1d_itype_lunit == 1
-    weights=output_PFTs.pfts1d_wtgcell[pft_mask]
-    if len(weights) == len(pft_names_default[:17])*len(output_PFTs.lndgrid):
-        print('Reading from sim with default PFTs')
-        vegdata_PFTs=xarray.Dataset(coords={'time':output_PFTs.time,'PFT':arange(len(pft_names_default[:17])),'ecotype':arange(len(output_PFTs.lndgrid))})
-        newshape=(len(output_PFTs.lndgrid),len(pft_names_default[:17]))
-        vegdata_PFTs.coords['PFTnames']=xarray.DataArray(pft_names_default[:17],dims=('PFT',)) 
-        vegdata_PFTs.coords['PFTcolors']=xarray.DataArray(pft_colors_default[:17],dims=('PFT',))
-    else:
-        print('Reading from sim with new PFTs')
-        vegdata_PFTs=xarray.Dataset(coords={'time':output_PFTs.time,'PFT':arange(len(pft_names)),'ecotype':arange(len(output_PFTs.lndgrid))})
-        newshape=(len(output_PFTs.lndgrid),len(pft_names))
-        vegdata_PFTs.coords['PFTnames']=xarray.DataArray(pft_names,dims=('PFT',))
-        vegdata_PFTs.coords['PFTcolors']=xarray.DataArray(pft_colors,dims=('PFT',))
-
-    vegdata_PFTs['weights']=(('ecotype','PFT'),weights.values.reshape(newshape))
-    if len(output_PFTs.lndgrid)>1:
-        vegdata_PFTs.coords['community_names']=xarray.DataArray(landscape_ecotypes,dims=('ecotype',))
-    else:
-        vegdata_PFTs.coords['community_names']=xarray.DataArray(['Gridcell'],dims=('ecotype',))
-
-
-    for varname in output_PFTs.variables:
-        var=output_PFTs[varname]
-        if var.dims == ('time','pft'):
-            print(varname)
-            vardata=var.values[:,pft_mask].reshape((len(var.time),newshape[0],newshape[1]))
-            vegdata_PFTs[var.name+'_unweighted']=(('time','ecotype','PFT'),vardata)
-            vegdata_PFTs[var.name+'_unweighted'].attrs['long_name']=var.long_name
-            vegdata_PFTs[var.name+'_unweighted'].attrs['units']=var.units
-        elif var.dims == ('time','levdcmp','pft'):
-            print(varname+' (depth-resolved)')
-            vardata=var.values[:,:,pft_mask].reshape((len(var.time),len(var.levdcmp),newshape[0],newshape[1]))
-            vegdata_PFTs[var.name+'_unweighted']=(('time','levdcmp','ecotype','PFT'),vardata)
-            vegdata_PFTs[var.name+'_unweighted'].attrs['long_name']=var.long_name
-            vegdata_PFTs[var.name+'_unweighted'].attrs['units']=var.units
+        pft_mask=output_PFTs.pfts1d_itype_lunit == 1
+        weights=output_PFTs.pfts1d_wtgcell[pft_mask]
+        if len(weights) == len(pft_names_default[:17])*len(output_PFTs.lndgrid):
+            print('Reading from sim with default PFTs')
+            vegdata_PFTs=xarray.Dataset(coords={'time':output_PFTs.time,'PFT':arange(len(pft_names_default[:17])),'ecotype':arange(len(output_PFTs.lndgrid))})
+            newshape=(len(output_PFTs.lndgrid),len(pft_names_default[:17]))
+            vegdata_PFTs.coords['PFTnames']=xarray.DataArray(pft_names_default[:17],dims=('PFT',)) 
+            vegdata_PFTs.coords['PFTcolors']=xarray.DataArray(pft_colors_default[:17],dims=('PFT',))
         else:
-            print('Skipping variable %s'%varname)
-    return vegdata_PFTs
+            print('Reading from sim with new PFTs')
+            vegdata_PFTs=xarray.Dataset(coords={'time':output_PFTs.time,'PFT':arange(len(pft_names)),'ecotype':arange(len(output_PFTs.lndgrid))})
+            newshape=(len(output_PFTs.lndgrid),len(pft_names))
+            vegdata_PFTs.coords['PFTnames']=xarray.DataArray(pft_names,dims=('PFT',))
+            vegdata_PFTs.coords['PFTcolors']=xarray.DataArray(pft_colors,dims=('PFT',))
+
+        vegdata_PFTs['weights']=(('ecotype','PFT'),weights.values.reshape(newshape))
+        if len(output_PFTs.lndgrid)>1:
+            vegdata_PFTs.coords['community_names']=xarray.DataArray(landscape_ecotypes,dims=('ecotype',))
+        else:
+            vegdata_PFTs.coords['community_names']=xarray.DataArray(['Gridcell'],dims=('ecotype',))
+
+
+        for varname in output_PFTs.variables:
+            var=output_PFTs[varname]
+            if var.dims == ('time','pft'):
+                print(varname)
+                vardata=var.values[:,pft_mask].reshape((len(var.time),newshape[0],newshape[1]))
+                vegdata_PFTs[var.name+'_unweighted']=(('time','ecotype','PFT'),vardata)
+                vegdata_PFTs[var.name+'_unweighted'].attrs['long_name']=var.long_name
+                vegdata_PFTs[var.name+'_unweighted'].attrs['units']=var.units
+            elif var.dims == ('time','levdcmp','pft'):
+                print(varname+' (depth-resolved)')
+                vardata=var.values[:,:,pft_mask].reshape((len(var.time),len(var.levdcmp),newshape[0],newshape[1]))
+                vegdata_PFTs[var.name+'_unweighted']=(('time','levdcmp','ecotype','PFT'),vardata)
+                vegdata_PFTs[var.name+'_unweighted'].attrs['long_name']=var.long_name
+                vegdata_PFTs[var.name+'_unweighted'].attrs['units']=var.units
+            else:
+                print('NonPFT variable %s'%varname)
+                vegdata_PFTs[var.name]=var
+        return vegdata_PFTs
 
 
 ecotype_names_list=[ecotype_names[landscape_ecotypes[n]] for n in surfdata.lsmlon.values]
@@ -296,7 +304,16 @@ def plot_var_PFTs(varname,moddata,ecotype_num,ax=None,obsdata=None,minyear=0,max
 
     import datetime
 
-    if not isinstance(moddata['time'].data[0],numpy.datetime64):
+    if isinstance(moddata['time'].data[0],numpy.number):
+        t=moddata['time']/365
+        dt=diff(t).mean()
+        mindate=minyear
+        maxdate=maxyear
+        if cumulative:
+            dat=dat.cumsum(dim='time')*dt
+            dat=dat-dat.isel(time=nonzero(t>minyear)[0][0])
+            
+    elif not isinstance(moddata['time'].data[0],numpy.datetime64):
         t=array([tt.year + (tt.dayofyr-1)/365 for tt in moddata['time'].data])
         dt=diff(t).mean()
 
@@ -305,6 +322,7 @@ def plot_var_PFTs(varname,moddata,ecotype_num,ax=None,obsdata=None,minyear=0,max
         if cumulative:
             dat=dat.cumsum(dim='time')*dt
             dat=dat-dat.isel(time=nonzero(t>minyear)[0][0])
+
     else:
         t=moddata['time'].data
         dt=diff(t).mean()
@@ -414,8 +432,10 @@ def pft_params(paramdata,paramnames):
         pdict[name]=paramdata[name]
     return pandas.DataFrame(pdict).set_index('pftname')
     
-def plot_PFT_distributions():
-    subplot(131)
+def plot_PFT_distributions(axs=None):
+    if axs is None:
+        axs=gcf().subplots(ncols=3)
+    sca(axs[0])
     names=[]
     bottom=zeros(len(landscape_ecotypes))
     for pftnum in range(len(pft_names_default[:17])):
@@ -427,11 +447,11 @@ def plot_PFT_distributions():
         names.append(' '.join(pft_names_default[pftnum].split('_')).title() )
 
     xticks(arange(len(landscape_ecotypes)),landscape_ecotypes,rotation=0)
-    title('Default ELM PFTs')
+    title('E3SM grid PFTs')
     l=legend(labels=names,loc=(0.0,1.1),fontsize='small')
     l.set_draggable(True)
     
-    subplot(132)
+    sca(axs[1])
     names=[]
     bottom=zeros(len(landscape_ecotypes))
     for pftnum in range(len(pft_names_default[:17])):
@@ -443,11 +463,11 @@ def plot_PFT_distributions():
         names.append(' '.join(pft_names_default[pftnum].split('_')).title() )
 
     xticks(arange(len(landscape_ecotypes)),landscape_ecotypes,rotation=0)
-    title('Default ELM PFTs')
+    title('Default ELM PFTs, site areas')
     l=legend(labels=names,loc=(0.0,1.1),fontsize='small')
     l.set_draggable(True)
 
-    subplot(133)
+    sca(axs[2])
     names=[]
     bottom=zeros(len(landscape_ecotypes))
     for pftnum in range(len(pft_names)):
@@ -459,8 +479,8 @@ def plot_PFT_distributions():
         names.append(' '.join(pft_names[pftnum].split('_')).title() )
 
     xticks(arange(len(landscape_ecotypes)),landscape_ecotypes,rotation=0)
-    title('Updated ELM PFTs')
+    title('Arctic PFTs')
     l=legend(labels=names,loc=(0.0,1.1),fontsize='small')
     l.set_draggable(True)
 
-    tight_layout()
+    # tight_layout()
