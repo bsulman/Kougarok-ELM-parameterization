@@ -188,9 +188,14 @@ Koug_meas_chem_old=pandas.read_excel(basedir+'/obs_data/NGEEArctic_Q3ELM_Kougaro
     .rename(columns={'ELM_PFT':'ELMgroup'}).set_index(['Ecotype','ELMgroup'])
 
 # New version
-Koug_meas_biomass=pandas.read_excel(basedir+'/obs_data/NGEE Arctic Veg data compiled 12June2019/NGEEArctic_Q3ELM_KougarokBiomass&NPP_20190612.xlsx',sheet_name='data')\
+# Koug_meas_biomass=pandas.read_excel(basedir+'/obs_data/NGEE Arctic Veg data compiled 12June2019/NGEEArctic_Q3ELM_KougarokBiomass&NPP_20190612.xlsx',sheet_name='data')\
+#     .set_index(['Ecotype','PlotID','ELM_PFT'])
+# Koug_meas_chem=pandas.read_excel(basedir+'/obs_data/NGEE Arctic Veg data compiled 12June2019/Kougarok_Q3ELM_KougarokSLA&Chemistry_20190612.xlsx',sheet_name='data')\
+#     .set_index(['Ecotype','PlotID','ELM_PFT'])
+
+Koug_meas_biomass=pandas.read_excel(basedir+'/obs_data/NGEE Arctic Veg data compiled 4May2020/NGEEArctic_Q3ELM_Biomass&NPP_20200504.xlsx',sheet_name='final data')\
     .set_index(['Ecotype','PlotID','ELM_PFT'])
-Koug_meas_chem=pandas.read_excel(basedir+'/obs_data/NGEE Arctic Veg data compiled 12June2019/Kougarok_Q3ELM_KougarokSLA&Chemistry_20190612.xlsx',sheet_name='data')\
+Koug_meas_chem=pandas.read_excel(basedir+'/obs_data/NGEE Arctic Veg data compiled 4May2020/Kougarok_Q3ELM_KougarokSLA&Chemistry_20200504.xlsx',sheet_name='data')\
     .set_index(['Ecotype','PlotID','ELM_PFT'])
 
 obsdata_PFT_mappings={'dwarf shrub deciduous':'arctic_deciduous_shrub_dwarf',
@@ -265,14 +270,26 @@ ecotype_height_mapping={
     'Moist to dry alder (Alnus viridis) communities and alder savannas':'AS',
     'Low-shrub tundra, acidic soils, warmest parts of subzone E':'WBT'
 }
-Breen_means=Breen_data.groupby('habitat_type').mean().rename(index=ecotype_height_mapping)  
-obs_heights['canopy_height_max']=Breen_means['maximum_ canopy_height']
+ecotype_height_mapping={
+    'Alder shrubland':'AS',
+    'Dwarf-shrub lichen tundra':'BEL',
+    'Non-acidic mountain complex':'DLST',
+    'Tussock tundra':'TT',
+    'Tussock tundra-Willow-birch tundra complex OR Alder savannah in tussock tundra':'ASV',
+    'Willow-birch tundra':'WBT'
+}
+Breen_means=Breen_data.groupby('preliminary_plant_community_name').mean().rename(index=ecotype_height_mapping)  
 obs_heights['tree_height_mean']=Breen_means['mean_tree_layer_height']
 obs_heights['shrub_height_mean']=Breen_means['mean_shrub_layer_height']
 obs_heights['tall_shrub_height_mean']=Breen_means['mean_tall_shrub_height']
 obs_heights['low_shrub_height_mean']=Breen_means['mean_low_shrub_height']
 obs_heights['dwarf_shrub_height_mean']=Breen_means['mean_dwarf_shrub_height']
 obs_heights['forb_height_mean']=Breen_means['mean_forb_height']
+
+obs_heights['canopy_height_max']=Breen_data.groupby('preliminary_plant_community_name').max().rename(index=ecotype_height_mapping)['maximum_ canopy_height']
+
+soildepth=pandas.read_excel('../obs_data/NGEEArctic_Kougarok_SoilDepth_starting2016_v1.xlsx',header=6)
+soilcores=pandas.read_excel('../obs_data/NGEE Arctic_Kougarok_2016_Soil cores_20170906.xlsx')
 
 # convert from cm to m
 obs_heights=obs_heights/100
@@ -444,7 +461,7 @@ def plot_PFT_distributions(axs=None):
             continue
         bar(arange(len(landscape_ecotypes)),pft_pcts,bottom=bottom,facecolor=pft_colors_default[pftnum])
         bottom=bottom+pft_pcts
-        names.append(' '.join(pft_names_default[pftnum].split('_')).title() )
+        names.append(prettify_pft_name(pft_names_default[pftnum] ))
 
     xticks(arange(len(landscape_ecotypes)),landscape_ecotypes,rotation=0)
     title('E3SM grid PFTs')
@@ -460,7 +477,7 @@ def plot_PFT_distributions(axs=None):
             continue
         bar(arange(len(landscape_ecotypes)),pft_pcts,bottom=bottom,facecolor=pft_colors_default[pftnum])
         bottom=bottom+pft_pcts
-        names.append(' '.join(pft_names_default[pftnum].split('_')).title() )
+        names.append(prettify_pft_name(pft_names_default[pftnum] ))
 
     xticks(arange(len(landscape_ecotypes)),landscape_ecotypes,rotation=0)
     title('Default ELM PFTs, site areas')
@@ -470,17 +487,30 @@ def plot_PFT_distributions(axs=None):
     sca(axs[2])
     names=[]
     bottom=zeros(len(landscape_ecotypes))
-    for pftnum in range(len(pft_names)):
+    order=['not_vegetated','arctic_deciduous_shrub_dwarf','arctic_evergreen_shrub_dwarf','arctic_deciduous_shrub_low',
+            'arctic_deciduous_shrub_tall','arctic_deciduous_shrub_alder',
+            'arctic_forb','arctic_dry_graminoid','arctic_bryophyte','arctic_lichen']
+    # for pftnum in range(len(pft_names)):
+    for pftname in order:
+        pftnum=pft_names.index(pftname)
         pft_pcts=PFT_percents.loc[pft_names[pftnum]]
         if (pft_pcts==0).all():
             continue
         bar(arange(len(landscape_ecotypes)),pft_pcts,bottom=bottom,facecolor=pft_colors[pftnum])
         bottom=bottom+pft_pcts
-        names.append(' '.join(pft_names[pftnum].split('_')).title() )
+        names.append(prettify_pft_name(pft_names[pftnum] ))
+        
+    # Add indicator of shrubs and non-shrubs
+    notveg=PFT_percents.loc['not_vegetated']
+    allshrubs=PFT_percents[PFT_percents.index.str.contains('shrub')].sum()
+    nonshrubs=100-notveg-allshrubs
+    bar(arange(len(landscape_ecotypes)),notveg,facecolor='None',edgecolor=pft_colors_default[pft_names_default.index('not_vegetated')],linewidth=2,linestyle='--',alpha=0.8)
+    bar(arange(len(landscape_ecotypes)),allshrubs,bottom=notveg,facecolor='None',edgecolor=pft_colors_default[pft_names_default.index('broadleaf_deciduous_boreal_shrub')],linewidth=1.5,linestyle='--',alpha=0.8)
+    bar(arange(len(landscape_ecotypes)),nonshrubs,bottom=notveg+allshrubs,facecolor='None',edgecolor=pft_colors_default[pft_names_default.index('c3_arctic_grass')],linewidth=1.5,linestyle='--',alpha=0.8)
 
     xticks(arange(len(landscape_ecotypes)),landscape_ecotypes,rotation=0)
     title('Arctic PFTs')
-    l=legend(labels=names,loc=(0.0,1.1),fontsize='small')
+    l=legend(labels=names,loc=(0.0,1.1),fontsize='small',ncol=2)
     l.set_draggable(True)
 
     # tight_layout()

@@ -34,6 +34,37 @@ meas_NPP_C.loc[:,:,'potential tall shrub deciduous birch'] = meas_NPP_C.loc[:,:,
 meas_NPP_C.rename(index={'potential tall shrub deciduous birch':'potential tall shrub deciduous non-alder'},inplace=True)
 meas_NPP_C.drop('potential tall shrub deciduous willow',level='ELM_PFT',inplace=True)
 
+Amy_Verity_mapping={'deciduous dwarf shrub':'dwarf shrub deciduous',
+             'evergreen shrub':'dwarf shrub evergreen',
+             'deciduous low shrub':'low shrub deciduous',
+             'deciduous low to tall willow and birch shrub':'potential tall shrub deciduous non-alder',
+             'deciduous low to tall alder shrub':'potential tall shrub deciduous alder'}
+pftareas=pandas.read_excel('../../Amy_data/ngee_arctic_pft_tallies_kougarok_20191010.xlsx',sheet_name='KG_species_table',skiprows=[1,2],header=0).replace(Amy_Verity_mapping) 
+
+pftareas['ELM_default_PFT']=[obsdata_E3SMPFT_mappings[pft] for pft in pftareas['NGEE_PFT']] 
+
+def get_taxon_areas(data,pft,community,pftcol='NGEE_PFT'):
+
+    com_cols=['KG_%s%d_VgComp'%(community,num) for num in range(1,6)]
+    if pft not in data[pftcol].to_list():
+        raise ValueError('PFT %s not in dataset'%pft)
+    return data[data[pftcol]==Amy_Verity_mapping.get(pft,pft)][['Origina_ taxon_determination']+com_cols]
+
+# # Reclassify Betula nana in WBT and ASV as low shrub (which is Amy's classification)
+# # Probably need to revisit other communities to make sure Betula nana isn't causing problems
+# Update (May 4, 2020): Verity has updated the data to correct the classification issues
+# for comm in ['WBT','ASV','TT']:
+#     for plotid in unique(meas_leaf_C.loc[comm].index.get_level_values('PlotID')): # Indexing ['WBT',:,pft] didn't work right
+#         meas_leaf_C.loc[comm,plotid,'low shrub deciduous'] = meas_leaf_C.loc[comm,plotid,'low shrub deciduous'] + meas_leaf_C.loc[comm,plotid,'dwarf shrub deciduous'] 
+#         meas_leaf_C.loc[comm,plotid,'dwarf shrub deciduous']=0.0
+#         meas_stem_C.loc[comm,plotid,'low shrub deciduous'] = meas_stem_C.loc[comm,plotid,'low shrub deciduous'] + meas_stem_C.loc[comm,plotid,'dwarf shrub deciduous'] 
+#         meas_stem_C.loc[comm,plotid,'dwarf shrub deciduous']=0.0
+#         meas_rhizome_C.loc[comm,plotid,'low shrub deciduous'] = meas_rhizome_C.loc[comm,plotid,'low shrub deciduous'] + meas_rhizome_C.loc[comm,plotid,'dwarf shrub deciduous'] 
+#         meas_rhizome_C.loc[comm,plotid,'dwarf shrub deciduous']=0.0
+#         meas_NPP_C.loc[comm,plotid,'low shrub deciduous'] = meas_NPP_C.loc[comm,plotid,'low shrub deciduous'] + meas_NPP_C.loc[comm,plotid,'dwarf shrub deciduous'] 
+#         meas_NPP_C.loc[comm,plotid,'dwarf shrub deciduous']=0.0
+# 
+
 
 
 def obs_to_defaultPFTs(obsdata,mapping=obsdata_defaultPFT_mappings):
@@ -100,9 +131,11 @@ def plot_mod_bar_stack(x,dat,econum,do_legend=False,op='max',**kwargs):
     return handles
 
 
-def plot_obs_bar_stack(x,obsdata,ecotype_num,bottom=0.0,**kwargs):
+def plot_obs_bar_stack(x,obsdata,ecotype_num,bottom=0.0,pfts=None,**kwargs):
     names=[]
-    for pft in unique(obsdata[landscape_ecotypes[ecotype_num]].index.get_level_values('ELM_PFT')):
+    if pfts is None:
+        pfts=unique(obsdata[landscape_ecotypes[ecotype_num]].index.get_level_values('ELM_PFT'))
+    for num,pft in enumerate(pfts):
         if 'PlotID' in obsdata.index.names:
             val=obsdata.loc[landscape_ecotypes[ecotype_num],:,pft].mean()
             valstd=obsdata.loc[landscape_ecotypes[ecotype_num],:,pft].std()
@@ -112,7 +145,7 @@ def plot_obs_bar_stack(x,obsdata,ecotype_num,bottom=0.0,**kwargs):
 
         if ~isnan(val):
             bar(x,val,bottom=bottom,facecolor=pft_colors[(pft_names.index(obsdata_PFT_mappings[pft]))],**kwargs)
-            errorbar(x+rand()*0.25,bottom+val,yerr=valstd,fmt='none',color=pft_colors[(pft_names.index(obsdata_PFT_mappings[pft]))])
+            errorbar(x+num/len(pfts)*0.25*kwargs.get('width',1.0),bottom+val,yerr=valstd,fmt='none',color=pft_colors[(pft_names.index(obsdata_PFT_mappings[pft]))])
             bottom=bottom+val
 
 
@@ -198,11 +231,13 @@ def plot_pft_biomass_bars(data_to_plot,axs=None,per_area=False,include_froot=Tru
                  'rhizome':obs_to_defaultPFTs(meas_rhizome_C,mapping),
                  'stem':obs_to_defaultPFTs(meas_stem_C,mapping),
                  'nonvasc':obs_to_defaultPFTs(meas_nonvasc_C,mapping)}
+        area_taxon_col='ELM_default_PFT'
     else:
         obsdata={'leaf':meas_leaf_C,
                  'rhizome':meas_rhizome_C,
                  'stem':meas_stem_C,
                  'nonvasc':meas_nonvasc_C}                
+        area_taxon_col='NGEE_PFT'
     for pftname in unique(obsdata['leaf'].index.get_level_values('ELM_PFT')) :
         if pftname in ['other','mixed','not_vegetated']:
              continue
@@ -217,26 +252,35 @@ def plot_pft_biomass_bars(data_to_plot,axs=None,per_area=False,include_froot=Tru
                 continue
             ax=axs[pfts_inuse.index(pftnum)-1]
         for econum in range(len(landscape_ecotypes)):
-            if per_area:
-                if 'c3_arctic_grass' in data_to_plot.PFTnames and use_pooled_default_PFTs:
-                    if pftname=='nonvascular':
-                        areafrac=(PFT_percents[landscape_ecotypes[econum]]['arctic_lichen']+PFT_percents[landscape_ecotypes[econum]]['arctic_bryophyte'])/100
-                    else:
-                        areafrac=PFT_percents_default[landscape_ecotypes[econum]][pftname]/100
+            # if per_area:
+            #     if 'c3_arctic_grass' in data_to_plot.PFTnames and use_pooled_default_PFTs:
+            #         if pftname=='nonvascular':
+            #             areafrac=(PFT_percents[landscape_ecotypes[econum]]['arctic_lichen']+PFT_percents[landscape_ecotypes[econum]]['arctic_bryophyte'])/100
+            #         else:
+            #             areafrac=PFT_percents_default[landscape_ecotypes[econum]][pftname]/100
+            #     else:
+            #         areafrac=PFT_percents[landscape_ecotypes[econum]][obsdata_PFT_mappings[pftname]]/100
+            #     if areafrac==0.0:
+            #         invareafrac=0.0
+            #     else:
+            #         invareafrac=1.0/areafrac
+            # else:
+            #     invareafrac=1.0
+            plotIDs=unique(obsdata['leaf'][landscape_ecotypes[econum]].index.get_level_values('PlotID'))
+            for plotnum,plotID in enumerate(plotIDs):
+                bottom=0.0
+                if per_area:
+                    areafrac=get_taxon_areas(pftareas,pftname,landscape_ecotypes[econum],area_taxon_col)['KG_%s%s_VgComp'%(landscape_ecotypes[econum],plotID.split('-')[-1])].sum()/100
                 else:
-                    areafrac=PFT_percents[landscape_ecotypes[econum]][obsdata_PFT_mappings[pftname]]/100
+                    areafrac=1.0
                 if areafrac==0.0:
                     invareafrac=0.0
                 else:
                     invareafrac=1.0/areafrac
-            else:
-                invareafrac=1.0
-            plotIDs=unique(obsdata['leaf'][landscape_ecotypes[econum]].index.get_level_values('PlotID'))
-            for plotnum,plotID in enumerate(plotIDs):
-                bottom=0.0
-                if per_area and pftname not in ['moss','bryophyte','lichen','nonvascular'] and pftname in obsdata['leaf'][landscape_ecotypes[econum],plotID]:
-                    val=meas_root_C[landscape_ecotypes[econum],plotID]
-                    h_obsroot=ax.bar(econum/6+w+plotnum*w/len(plotIDs),val,bottom=bottom,facecolor='brown',width=w/len(plotIDs),label='Pooled obs fine roots')
+                if per_area and pftname not in ['moss','bryophyte','lichen','nonvascular'] and pftname in obsdata['leaf'][landscape_ecotypes[econum],plotID] and obsdata['leaf'][landscape_ecotypes[econum],plotID,pftname]>0:
+                    # print(pftname,plotID,invareafrac,obsdata['leaf'][landscape_ecotypes[econum],plotID,pftname])
+                    val=meas_root_C[landscape_ecotypes[econum],plotID] # Does this need to be adjusted by fractional areas at all?
+                    h_obsroot=ax.bar(econum/6+w+plotnum*w/len(plotIDs),val,bottom=bottom,facecolor='brown',width=w/len(plotIDs),label='Fine roots')
                     bottom=bottom+val
                 
                 val=obsdata['rhizome'][landscape_ecotypes[econum],plotID].fillna(0.0).get(pftname,0.0)*invareafrac
