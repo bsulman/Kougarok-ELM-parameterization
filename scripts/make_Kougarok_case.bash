@@ -8,10 +8,10 @@ set -x
 
 THIS_SCRIPT=`realpath -e $BASH_SOURCE`
 
-modeltype="ELMuserpft_soildepth_spinup2"
+modeltype="ArcticPFTS_adspinup_test"
 sitename="Kougarok"
 # For spinup:
-compset="ICB1850CNPRDCTCBC"
+compset="ICB1850CNRDCTCBC"
 # For historical:
 # compset="ICB20TRCNPRDCTCBC"
 
@@ -32,7 +32,7 @@ cp $THIS_SCRIPT .
 ./xmlchange NTASKS_ESP=1
 
 # If doing cold start
-# ./xmlchange CLM_ACCELERATED_SPINUP=on,CLM_FORCE_COLDSTART=on
+./xmlchange CLM_ACCELERATED_SPINUP=on,CLM_FORCE_COLDSTART=on
 
 # comment out PFLOTRAN_INC and PFLOTRAN_LIB
 
@@ -44,10 +44,12 @@ cp $THIS_SCRIPT .
 cat >> user_nl_clm << EOF
 !fsurdat = '/lustre/or-hydra/cades-ccsi/proj-shared/project_acme/cesminput_ngee/lnd/clm2/surfdata_map/surfdata_51x63pt_kougarok-NGEE_TransA_simyr1850_c181115-sub12.nc'
 !fsurdat = '/home/b0u/Kougarok_param_edits/param_files/surfdata_51x63pt_kougarok-NGEE_TransA_simyr1850_c181115-sub12_updated_2019-02-15.nc'
-fsurdat = '/home/b0u/Kougarok_param_edits/param_files/surfdata_51x63pt_kougarok-NGEE_TransA_simyr1850_c190604-sub12_updated_2019-06-17.nc'
-!paramfile = '/lustre/or-hydra/cades-ccsi/proj-shared/project_acme/cesminput_ngee/lnd/clm2/paramdata/clm_params_c180524-sub12.nc'
+!fsurdat = '/home/b0u/Kougarok_param_edits/param_files/surfdata_51x63pt_kougarok-NGEE_TransA_simyr1850_c190604-sub12_updated_2019-06-17.nc'
+!fsurdat = '/home/b0u/Kougarok_param_edits/param_files/surfdata_51x63pt_kougarok-NGEE_TransA_simyr1850_c190604default.nc' 
+paramfile = '/lustre/or-hydra/cades-ccsi/proj-shared/project_acme/cesminput_ngee/lnd/clm2/paramdata/clm_params_c180524-sub12.nc'
 paramfile = '/home/b0u/cases/${modeltype}_${sitename}_${compset}/clm_params_updated.nc'
-!nyears_ad_carbon_only = 25
+!paramfile = '/home/b0u/Kougarok_param_edits/param_files/clm_params_defaultpfts_c180524_orig.nc'
+nyears_ad_carbon_only = 25
 !spinup_mortality_factor = 10
 metdata_type = 'gswp3v1_daymet'
 metdata_bypass = '/lustre/or-hydra/cades-ccsi/proj-shared/project_acme/cesminput_ngee/atm/datm7/atm_forcing.datm7.GSWP3_daymet.1x1pt_kougarok-NGEE/cpl_bypass_full'
@@ -67,17 +69,20 @@ hist_dov2xy = .true., .false. ! True means subgrid-level output, false means pat
 hist_nhtfrq = 0, 0 ! Output frequency. 0 is monthly, -24 is daily, 1 is timestep
 hist_mfilt  = 12 12 ! History file writing frequency: number of points from hist_nhtfrq
 hist_avgflag_pertape = 'A', 'A', 'A' ! A for averaging, I for instantaneous
+!flanduse_timeseries = '/lustre/or-hydra/cades-ccsi/proj-shared/project_acme/cesminput_ngee/lnd/clm2/surfdata_map/landuse.timeseries_51x63pt_kougarok-NGEE_TransA_simyr1850_c181115-sub12.nc'
+!flanduse_timeseries = '/lustre/or-hydra/cades-ccsi/proj-shared/project_acme/cesminput_ngee/lnd/clm2/surfdata_map/landuse.timeseries_51x63pt_kougarok-NGEE_TransA_simyr1850_c181115default.nc'
 EOF
 
 # If doing accelerated spinup, use CN and not P:
 #echo "Running in CN mode (no P) for accelerated spinup"
-#./xmlchange CLM_BLDNML_OPTS="-bgc bgc -nutrient cn -nutrient_comp_pathway rd  -soil_decomp ctc -methane -nitrif_denitrif  -maxpft 12"
+./xmlchange CLM_BLDNML_OPTS="-bgc bgc -nutrient cn -nutrient_comp_pathway rd  -soil_decomp ctc -methane -nitrif_denitrif  -maxpft 12"
 # Otherwise include P:
-./xmlchange CLM_BLDNML_OPTS="-bgc bgc -nutrient cnp -nutrient_comp_pathway rd  -soil_decomp ctc -methane -nitrif_denitrif  -maxpft 12"
+# ./xmlchange CLM_BLDNML_OPTS="-bgc bgc -nutrient cnp -nutrient_comp_pathway rd  -soil_decomp ctc -methane -nitrif_denitrif  -maxpft 12"
+#./xmlchange CLM_BLDNML_OPTS="-bgc bgc -nutrient cnp -nutrient_comp_pathway rd  -soil_decomp ctc -methane -nitrif_denitrif"
 
 ./xmlchange STOP_OPTION=nyear,REST_OPTION=nyear,REST_N=20
-./xmlchange STOP_N=300
-
+./xmlchange STOP_N=160
+#./xmlchange STOP_N=400
 
 echo "Two more things to do by hand:"
 echo " 1. Comment out PFLOTRAN_INC and PFLOTRAN_LIB in env_mach_specific.xml"

@@ -326,6 +326,7 @@ if __name__=='__main__':
     parser.add_argument('--rootprofile',action='store_true')
     parser.add_argument('--all',action='store_true')
     parser.add_argument('--save_figs',help='Directory to save figures')
+    parser.add_argument('--save_pftfile',action='store_true',default=False,help='Store processed PFT file?')
 
     options = parser.parse_args()
 
@@ -334,6 +335,8 @@ if __name__=='__main__':
     import os
     dataname=os.path.basename(filename)
     vegdata_PFTs=read_pftfile(filename,maxyear=None)
+    if options.save_pftfile:
+        vegdata_PFTs.to_netcdf(filename[:filename.rfind('.nc')]+'_processed.nc')
     
     columndata=xarray.open_dataset(filename.replace('h1','h0').replace('h2','h0'))
     t_col=array([tt.year + (tt.dayofyr-1)/365 for tt in columndata['time'].data])

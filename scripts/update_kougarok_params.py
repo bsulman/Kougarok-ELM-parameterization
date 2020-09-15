@@ -3,8 +3,8 @@ import numpy
 from numpy import zeros
 
 basedir='..'
-params_newfengming=xarray.open_dataset(basedir+'/param_files/clm_params_newpfts_c180524_orig.nc')
-params_orig=xarray.open_dataset(basedir+'/param_files/clm_params_defaultpfts_c180524_orig.nc') 
+params_newfengming=xarray.open_dataset(basedir+'/param_files/clm_params_newpfts_c180524_orig.nc',decode_times=False)
+params_orig=xarray.open_dataset(basedir+'/param_files/clm_params_defaultpfts_c180524_orig.nc',decode_times=False) 
 
 reset_to_defaults=True
 
@@ -115,6 +115,8 @@ if __name__=='__main__':
         change_param('flnr','arctic_bryophyte',0.0485)
 
 
+    params['rhizome_long']=xarray.DataArray(name='rhizome_long',dims='pft',data=zeros(len(pft_names))+2.0,attrs={'units':'yr','long_name':'Nonwoody rhizome longevity'})
+
     meas_leaf_C=(Koug_meas_biomass['LeafBiomass_gperm2']*Koug_meas_chem['LeafC_percent']/100)
     meas_root_C=(Koug_meas_biomass['FineRootBiomass_gperm2'][:,'mixed']*(Koug_meas_chem['FineRootC_percent']/100))[:,'mixed']
     meas_rhizome_C=(Koug_meas_biomass['RhizomeBiomass_gperm2']*Koug_meas_chem['RhizomeC_percent']/100)
@@ -146,11 +148,8 @@ if __name__=='__main__':
     # SLA in Verity's data is in cm2/g. Parameter in model is in m2/gC. Divide obs by 100**2 and %C to convert units
     meas_SLA = Koug_meas_chem['LeafSLA_cm2perg']/(Koug_meas_chem['LeafC_percent']/100)/100**2
 
-    # fcur_deciduous=0.0
-    # fcur_evergreen=1.0
-    # printnote('Setting fcur to one minus the rhizome fraction of total NPP')
-    fcur_pfts = 1.0 - meas_rhizome_NPP/meas_tot_NPP
-    fcur_pfts[:]=0.75
+    fcur_deciduous=0.0
+    fcur_evergreen=0.75
 
     # evergreen dwarf shrub
     pft='arctic_evergreen_shrub_dwarf'
@@ -183,16 +182,15 @@ if __name__=='__main__':
     dwarf_e_shrub_frootlong=2.0
     change_param('froot_long',pft,dwarf_e_shrub_frootlong) # Longevity estimated from Verity's data description Table 3
     # change_param('froot_leaf',pft,(froot_leaf_NAMC)*leaflong/dwarf_e_shrub_frootlong )
-    change_param('froot_leaf',pft,3.0)
-    # fcur will have to be calibrated so storage pool is consistent with measured rhizome biomass
-    change_param('fcur',pft,fcur_pfts['NAMC','dwarf shrub evergreen'])
+    change_param('froot_leaf',pft,2.5)
+    change_param('fcur',pft,fcur_evergreen)
 
     change_param('slatop',pft,meas_SLA[:,'dwarf shrub evergreen'].mean())
     change_param('leafcn',pft,obs_leafCN[:,'dwarf shrub evergreen'].mean())
     # change_param('frootcn',pft,(obs_frootCN*froot_leaf_NAMC + obs_rhizomeCN[:,'dwarf shrub evergreen'].mean()*rhizome_leaf_NAMC)/(froot_leaf_NAMC+rhizome_leaf_NAMC))
     change_param('frootcn',pft,obs_frootCN)
-    change_param('croot_stem',pft,0.5)
-    change_param('stem_leaf',pft,0.1)
+    change_param('croot_stem',pft,1.0)
+    change_param('stem_leaf',pft,0.15)
 
     change_param('lflitcn',pft,56.0)
 
@@ -205,14 +203,16 @@ if __name__=='__main__':
     # Setting this to total root:leaf ratio of DSLT which is mostly shrubs.
     printnote('Setting dwarf deciduous shrub root_leaf to total root:leaf ratio for DSLT, which is mostly shrubs')
     # This should be adjusted to reflect longer lifetime of fine roots
-    change_param('froot_leaf',pft,meas_root_C['DSLT']/meas_leaf_C['DSLT'].sum()/dwarf_e_shrub_frootlong  )
+    #change_param('froot_leaf',pft,meas_root_C['DSLT']/meas_leaf_C['DSLT'].sum()/dwarf_e_shrub_frootlong  )
+    change_param('froot_leaf',pft,1.5)
     change_param('froot_long',pft,dwarf_e_shrub_frootlong) # Not sure if this has any effect for deciduous species
-    change_param('croot_stem',pft,0.5)
+    change_param('croot_stem',pft,0.6)
+    change_param('stem_leaf',pft,0.22)
 
     change_param('slatop',pft,meas_SLA[:,'dwarf shrub deciduous'].mean())
     change_param('leafcn',pft,obs_leafCN[:,'dwarf shrub deciduous'].mean())
     change_param('frootcn',pft,obs_frootCN)
-    change_param('fcur',pft,0.5)
+    change_param('fcur',pft,0.0)
 
     # Tall non-alder shrub
     pft='arctic_deciduous_shrub_tall'
@@ -226,7 +226,7 @@ if __name__=='__main__':
     printnote('Deciduous shrub measured C:N varies a lot, from 11 to 31. Mean is 22.')
     change_param('leafcn',pft,obs_leafCN.loc[:,['tall shrub deciduous birch','tall shrub deciduous willow']].mean())
     change_param('frootcn',pft,obs_frootCN)
-    change_param('fcur',pft,fcur_pfts[:,'tall shrub deciduous willow'].mean())
+    change_param('fcur',pft,fcur_deciduous)
     change_param('croot_stem',pft,0.5)
     
     
@@ -234,29 +234,32 @@ if __name__=='__main__':
     pft='arctic_deciduous_shrub_low'
     #change_param('froot_leaf',pft,meas_root_C['DSLT']/meas_leaf_C['DSLT'].sum()  )
     printnote('Making froot_leaf for low shrubs intermediate between dwarf and tall values')
-    change_param('froot_leaf',pft, 0.5*(params['froot_leaf'][pft_names.index('arctic_deciduous_shrub_dwarf')]+params['froot_leaf'][pft_names.index('arctic_deciduous_shrub_tall')]).values)
+    #change_param('froot_leaf',pft, 0.5*(params['froot_leaf'][pft_names.index('arctic_deciduous_shrub_dwarf')]+params['froot_leaf'][pft_names.index('arctic_deciduous_shrub_tall')]).values)
+    change_param('froot_leaf',pft,1.41)
     change_param('froot_long',pft,dwarf_e_shrub_frootlong)
 
     change_param('slatop',pft,meas_SLA[:,'low shrub deciduous'].mean())
     change_param('leafcn',pft,obs_leafCN[:,'low shrub deciduous'].mean())
     change_param('frootcn',pft,obs_frootCN)
-    change_param('fcur',pft,0.5 )
-    change_param('croot_stem',pft,0.5)
-
+    change_param('fcur',pft,fcur_deciduous )
+    change_param('croot_stem',pft,0.8)
+    change_param('stem_leaf',pft,0.22)
     
     # Alder
     pft='arctic_deciduous_shrub_alder'
     froot_leaf_AS=froot_leaf('AS','tall shrub deciduous alder')
     froot_leaf_TTWBT=froot_leaf('TTWBT','tall shrub deciduous alder')
-    change_param('froot_leaf',pft,1.0)
+    change_param('froot_leaf',pft,0.25)
 
     change_param('slatop',pft,meas_SLA[:,'tall shrub deciduous alder'].mean())
     change_param('leafcn',pft,obs_leafCN[:,'tall shrub deciduous alder'].mean())
     change_param('frootcn',pft,obs_frootCN)
-    change_param('fcur',pft,0.5 )
-    change_param('stem_leaf',pft,0.25)
+    change_param('fcur',pft,fcur_deciduous )
+    change_param('stem_leaf',pft,0.5)
     change_param('croot_stem',pft,0.6)
-
+    # change_param('flnr',pft,0.1365*2) # Set to double of other shrubs
+    # Probably not the solution... Alistair's measurements show alder vcmax of ~50-100, which is consistent
+    # with model calculation using default flnr value. Doubled flnr gives vcmax of 200, which seems too high
 
     # Graminoid
     froot_leaf_TT=froot_leaf('TT','graminoid')
@@ -268,8 +271,8 @@ if __name__=='__main__':
     # Use mean of TT and TTWBT, which have more graminoids and similar values
     # Use same values for wet and dry graminoids in model for now
     printnote('Using same parameter values for wet and dry graminoids')
-    # printnote('Calculating rhizome lifetime from NPP and biomass (assuming steady state)')
-    # rhizome_lifetime = (meas_rhizome_C/meas_rhizome_NPP)['TT','graminoid']
+    printnote('Calculating rhizome lifetime from NPP and biomass (assuming steady state)')
+    rhizome_lifetime = (meas_rhizome_C/meas_rhizome_NPP)['TT','graminoid']
     # froot_leaf_gram=0.5*(froot_leaf_TT+froot_leaf_TTWBT)/3.13 + 0.5*(rhizome_leaf_TT+rhizome_leaf_TTWBT)/rhizome_lifetime
     # froot_leaf_gram=froot_leaf_gram*1.5
     froot_leaf_gram = 0.5*froot_leaf_TT + 0.5*froot_leaf_TTWBT
@@ -295,8 +298,9 @@ if __name__=='__main__':
         #change_param('froot_long',pftwet,3.13*frootfrac_graminoid + rhizome_lifetime*(1-frootfrac_graminoid))
         #change_param('froot_long',pftdry,3.13*frootfrac_graminoid + rhizome_lifetime*(1-frootfrac_graminoid))
         change_param('froot_long',pft,rootlong)
+        change_param('rhizome_long',pft,rhizome_lifetime)
 
-        change_param('fcur',pft,fcur_pfts[:,'graminoid'].mean() )
+        change_param('fcur',pft,fcur_evergreen )
 
         printnote('According to Verity, grasses act more like evergreen plants. Do not drop leaves/roots every year')
         change_param('season_decid',pft,0)
@@ -316,7 +320,7 @@ if __name__=='__main__':
         ## change_param('deadwdcn',pft,500)   # If this is zero the model crashes on initialization
 
         # Updated strategy: Changed code so for non-woody plants stem_leaf is interpreted as rhizome allocation and sent to livecrootc 
-        change_param('stem_leaf',pft,0.1)
+        change_param('stem_leaf',pft,0.2)
         change_param('livewdcn',pft,50)   # If this is zero the model crashes on initialization
 
     # Forb
@@ -331,9 +335,13 @@ if __name__=='__main__':
     change_param('leafcn',pft,obs_leafCN[:,'forb'].mean())
     change_param('frootcn',pft,obs_frootCN)
  
-    change_param('fcur',pft,fcur_pfts[:,'forb'].mean())
+    change_param('fcur',pft,fcur_deciduous)
     change_param('froot_leaf',pft,1.5)
     change_param('flnr',pft,0.2)
+        
+    change_param('stem_leaf',pft,0.1)
+    change_param('livewdcn',pft,50)   # If this is zero the model crashes on initialization
+    change_param('rhizome_long',pft,rhizome_lifetime)
 
     # Lichen
     change_param('froot_leaf','arctic_lichen',0.2)
@@ -341,12 +349,14 @@ if __name__=='__main__':
     change_param('roota_par','arctic_lichen',400.0)
     change_param('lflitcn','arctic_lichen',115.0)
     change_param('leafcn','arctic_lichen',84.0)
+    change_param('slatop','arctic_lichen',0.036)
 
     # Bryophyte
     change_param('leaf_long','arctic_bryophyte',5.0)
     change_param('roota_par','arctic_bryophyte',100.0)
     change_param('lflitcn','arctic_bryophyte',66.0)
     change_param('leafcn','arctic_bryophyte',55.0)
+    change_param('slatop','arctic_bryophyte',0.061)
 
     change_param('lflitcn','arctic_lichen',   115.0)
     change_param('lflitcn','arctic_bryophyte' , 66.0)
@@ -372,8 +382,21 @@ if __name__=='__main__':
     change_param('rootb_par','arctic_dry_graminoid'         ,     9.0)
     change_param('rootb_par','arctic_wet_graminoid'         ,     9.0)
 
+    change_param('roota_par','arctic_lichen',   400.0)
+    change_param('roota_par','arctic_bryophyte'             ,   200.0)
+    change_param('roota_par','arctic_evergreen_shrub_dwarf' ,    30.0)
+    change_param('roota_par','arctic_evergreen_shrub_tall'  ,    30.0)
+    change_param('roota_par','arctic_deciduous_shrub_dwarf' ,    13.0)
+    change_param('roota_par','arctic_deciduous_shrub_low'   ,    13.0)
+    change_param('roota_par','arctic_deciduous_shrub_tall'  ,    13.0)
+    change_param('roota_par','arctic_deciduous_shrub_alder' ,    13.0)
+    change_param('roota_par','arctic_forb'                  ,     11.0)
+    change_param('roota_par','arctic_dry_graminoid'         ,     11.0)
+    change_param('roota_par','arctic_wet_graminoid'         ,     11.0)
+
     # Set up params for new dormant maintenance respiration
-    dormant_mr_temp=273.15+2.5
+    # Verity suggests temperature threshold should be more like -2.5, based on Monson et al 2006, instead of +2.5
+    dormant_mr_temp=273.15-1.0
     dormant_mr_factor=5e-2
     printnote('Setting dormancy temperature to {0:1.1f} C'.format(dormant_mr_temp-273.15))
     printnote('Setting dormancy maintenance resp factor to {0:1.1g}'.format(dormant_mr_factor))
@@ -386,6 +409,9 @@ if __name__=='__main__':
     change_param('Nfix_NPP_c1','arctic_deciduous_shrub_alder',10.0)
     change_param('Nfix_NPP_c1','arctic_forb',5.0)
     change_param('Nfix_NPP_c2','arctic_deciduous_shrub_alder',0.05)
+
+    # After checking the code, this appears to be ignored in favor of an equation based on annual average temperature
+    change_universal_param('crit_onset_gdd',250)
 
     print('Saving params file to clm_params_updated.nc')
     params.to_netcdf(basedir+'/clm_params_updated.nc',format='NETCDF4_CLASSIC') # netcdf4 engine hangs on cades when netcdf4 version >1.3.1
