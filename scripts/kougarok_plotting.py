@@ -28,6 +28,8 @@ def prettify_pft_name(name):
         end=l.pop(-1)
         l.insert(-1,end)
         pretty_name=' '.join(l)
+    if pretty_name == "Deciduous Tall Shrub":
+        pretty_name="Deciduous Low to Tall Shrub"
     return pretty_name
 
 def get_time(data):
@@ -67,12 +69,27 @@ ecotype_names={'DLST':'Dryas-lichen dwarf shrub tundra',
                'TT'  :'Tussock tundra',
                'Gridcell':'Downscaled grid cell'}
 
-pft_colors=['C%d'%n for n in range(10)] + ['k','purple']
-pft_colors_default=['C0' for n in range(len(pft_names_default))]
+pft_colors_dict={
+ 'not_vegetated':'0.9',
+ 'arctic_lichen':'#FF8236',
+ 'arctic_bryophyte':'#BD2D2D',
+ 'arctic_evergreen_shrub_dwarf':'#FFE802',
+ 'arctic_evergreen_shrub_tall':'w',
+ 'arctic_deciduous_shrub_dwarf':'#FF4082',
+ 'arctic_deciduous_shrub_low':'#46C7C7',
+ 'arctic_deciduous_shrub_tall':'#4D9E6E',
+ 'arctic_deciduous_shrub_alder':'#354A24',
+ 'arctic_forb':'#BB80FF',
+ 'arctic_dry_graminoid':'#44E300',
+ 'arctic_wet_graminoid':'#44E300',
+ 
+}
+pft_colors=[pft_colors_dict[name] for name in pft_names]
+pft_colors_default=['0.9' for n in range(len(pft_names_default))]
 pft_colors_default[pft_names_default.index('broadleaf_evergreen_shrub')]='C3'
-pft_colors_default[pft_names_default.index('broadleaf_deciduous_boreal_shrub')]='C7'
-pft_colors_default[pft_names_default.index('c3_arctic_grass')]='k'
-pft_colors_default[pft_names_default.index('needleleaf_evergreen_boreal_tree')]='C6'
+pft_colors_default[pft_names_default.index('broadleaf_deciduous_boreal_shrub')]='0.3'
+pft_colors_default[pft_names_default.index('c3_arctic_grass')]=pft_colors_dict['arctic_dry_graminoid']
+pft_colors_default[pft_names_default.index('needleleaf_evergreen_boreal_tree')]='darkgreen'
 
 PFT_percents=pandas.DataFrame(data=surfdata.PCT_NAT_PFT.values.squeeze(),index=pft_names,columns=landscape_ecotypes)
 PFT_percents_default=pandas.DataFrame(data=surfdata_default.PCT_NAT_PFT.values.squeeze(),index=pft_names_default[:17],columns=landscape_ecotypes)

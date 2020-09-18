@@ -120,12 +120,7 @@ def plot_mod_bar_stack(x,dat,econum,do_legend=False,op='max',**kwargs):
         else:
             val=getattr(dat.sel(PFT=pftnum,ecotype=econum),op)(dim='time')
         if ~isnan(val):
-            if dat.PFTnames.sel(PFT=pftnum).str.startswith('arctic'):
-                name=dat.PFTnames.sel(PFT=pftnum).item()[len('arctic_'):]
-            else:
-                name=dat.PFTnames.sel(PFT=pftnum).item()
-            if name=='dry_graminoid':
-                name='graminoid'
+            name=prettify_pft_name(dat.PFTnames.sel(PFT=pftnum).item())
             handles.append(bar(x,val,bottom=bottom,facecolor=dat.PFTcolors.sel(PFT=pftnum).item(),label=name,**kwargs))
             bottom=bottom+val
     return handles
