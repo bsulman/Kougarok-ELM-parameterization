@@ -124,7 +124,7 @@ ${cmd} --caseidprefix ${name}_Arcticpfts \
 --maxpatch_pft=12 \
 --nopftdyn \
 --domainfile=/lustre/or-hydra/cades-ccsi/proj-shared/project_acme/cesminput_ngee/share/domains/domain.clm/domain.lnd.51x63pt_kougarok-NGEE_TransA_navy.nc \
---surffile=/home/b0u/Kougarok_param_edits/param_files/surfdata_51x63pt_kougarok-NGEE_TransA_simyr1850_c190604-sub12_updated_2019-06-17.nc \
+--surffile=/home/b0u/Kougarok_param_edits/param_files/surfdata_51x63pt_kougarok-NGEE_TransA_simyr1850_c190604-sub12_updated_2020-10-08.nc \
 --mod_parm_file=/home/b0u/Kougarok_param_edits/clm_params_updated.nc
 fi
 

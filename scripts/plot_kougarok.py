@@ -39,7 +39,7 @@ Amy_Verity_mapping={'deciduous dwarf shrub':'dwarf shrub deciduous',
              'deciduous low shrub':'low shrub deciduous',
              'deciduous low to tall willow and birch shrub':'potential tall shrub deciduous non-alder',
              'deciduous low to tall alder shrub':'potential tall shrub deciduous alder'}
-pftareas=pandas.read_excel('../../Amy_data/ngee_arctic_pft_tallies_kougarok_20191010.xlsx',sheet_name='KG_species_table',skiprows=[1,2],header=0).replace(Amy_Verity_mapping) 
+pftareas=pandas.read_excel('../obs_data/ngee_arctic_pft_tallies_kougarok_20191010.xlsx',sheet_name='KG_species_table',skiprows=[1,2],header=0).replace(Amy_Verity_mapping) 
 
 pftareas['ELM_default_PFT']=[obsdata_E3SMPFT_mappings[pft] for pft in pftareas['NGEE_PFT']] 
 
@@ -611,10 +611,10 @@ if __name__=='__main__':
 
 
         barfig_PFT=figure('Biomass comparison by PFT (%s)'%dataname,figsize=(12,6),clear=True);
-        plot_pft_biomass_bars(per_area=False,use_pooled_default_PFTs=True)
+        plot_pft_biomass_bars(data_to_plot,per_area=False,use_pooled_default_PFTs=True)
 
         barfig_PFT_perarea=figure('Biomass comparison per area of each PFT (%s)'%dataname,figsize=(12,6),clear=True);
-        plot_pft_biomass_bars(per_area=True,use_pooled_default_PFTs=True)
+        plot_pft_biomass_bars(data_to_plot,per_area=True,use_pooled_default_PFTs=True)
         
         f,a=subplots(num='NPP (%s)'%dataname,figsize=(12,6),clear=True,nrows=2,ncols=3)
         for econum in range(len(data_to_plot.ecotype)):
