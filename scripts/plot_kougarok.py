@@ -21,16 +21,16 @@ meas_stem_NPP =(Koug_meas_biomass['StemNPP_gperm2peryear']*Koug_meas_chem['StemC
 meas_rhizome_NPP =(Koug_meas_biomass['RhizomeNPP_gperm2peryear']*Koug_meas_chem['RhizomeC_percent']/100)
 
 # Add together willow and birch tall shrubs
-meas_leaf_C.loc[:,:,'potential tall shrub deciduous birch'] = meas_leaf_C.loc[:,:,'potential tall shrub deciduous birch']+meas_leaf_C.loc[:,:,'potential tall shrub deciduous willow'] 
+meas_leaf_C.loc[:,:,'potential tall shrub deciduous birch'] = meas_leaf_C.loc[:,:,'potential tall shrub deciduous birch'].fillna(0.0)+meas_leaf_C.loc[:,:,'potential tall shrub deciduous willow'].fillna(0.0) 
 meas_leaf_C.rename(index={'potential tall shrub deciduous birch':'potential tall shrub deciduous non-alder'},inplace=True)
 meas_leaf_C.drop('potential tall shrub deciduous willow',level='ELM_PFT',inplace=True)
-meas_stem_C.loc[:,:,'potential tall shrub deciduous birch'] = meas_stem_C.loc[:,:,'potential tall shrub deciduous birch']+meas_stem_C.loc[:,:,'potential tall shrub deciduous willow'] 
+meas_stem_C.loc[:,:,'potential tall shrub deciduous birch'] = meas_stem_C.loc[:,:,'potential tall shrub deciduous birch'].fillna(0.0)+meas_stem_C.loc[:,:,'potential tall shrub deciduous willow'].fillna(0.0) 
 meas_stem_C.rename(index={'potential tall shrub deciduous birch':'potential tall shrub deciduous non-alder'},inplace=True)
 meas_stem_C.drop('potential tall shrub deciduous willow',level='ELM_PFT',inplace=True)
-meas_rhizome_C.loc[:,:,'potential tall shrub deciduous birch'] = meas_rhizome_C.loc[:,:,'potential tall shrub deciduous birch']+meas_rhizome_C.loc[:,:,'potential tall shrub deciduous willow'] 
+meas_rhizome_C.loc[:,:,'potential tall shrub deciduous birch'] = meas_rhizome_C.loc[:,:,'potential tall shrub deciduous birch'].fillna(0.0)+meas_rhizome_C.loc[:,:,'potential tall shrub deciduous willow'].fillna(0.0) 
 meas_rhizome_C.rename(index={'potential tall shrub deciduous birch':'potential tall shrub deciduous non-alder'},inplace=True)
 meas_rhizome_C.drop('potential tall shrub deciduous willow',level='ELM_PFT',inplace=True)
-meas_NPP_C.loc[:,:,'potential tall shrub deciduous birch'] = meas_NPP_C.loc[:,:,'potential tall shrub deciduous birch']+meas_NPP_C.loc[:,:,'potential tall shrub deciduous willow'] 
+meas_NPP_C.loc[:,:,'potential tall shrub deciduous birch'] = meas_NPP_C.loc[:,:,'potential tall shrub deciduous birch'].fillna(0.0)+meas_NPP_C.loc[:,:,'potential tall shrub deciduous willow'].fillna(0.0) 
 meas_NPP_C.rename(index={'potential tall shrub deciduous birch':'potential tall shrub deciduous non-alder'},inplace=True)
 meas_NPP_C.drop('potential tall shrub deciduous willow',level='ELM_PFT',inplace=True)
 

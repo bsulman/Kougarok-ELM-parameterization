@@ -42,7 +42,8 @@ def get_time(data):
 # domaindata=xarray.open_dataset('/lustre/or-hydra/cades-ccsi/proj-shared/project_acme/cesminput_ngee/share/domains/domain.clm/domain.lnd.51x63pt_kougarok-NGEE_TransA_navy.nc')
 # surfdata=xarray.open_dataset(basedir+'/param_files/surfdata_51x63pt_kougarok-NGEE_TransA_simyr1850_c181115-sub12.nc')
 # surfdata=xarray.open_dataset(basedir+'/param_files/surfdata_51x63pt_kougarok-NGEE_TransA_simyr1850_c181115-sub12_updated_2019-02-15.nc')
-surfdata=xarray.open_dataset(basedir+'/param_files/surfdata_51x63pt_kougarok-NGEE_TransA_simyr1850_c190604-sub12_updated_2019-06-17.nc')
+# surfdata=xarray.open_dataset(basedir+'/param_files/surfdata_51x63pt_kougarok-NGEE_TransA_simyr1850_c190604-sub12_updated_2019-06-17.nc')
+surfdata=xarray.open_dataset(basedir+'/param_files/surfdata_51x63pt_kougarok-NGEE_TransA_simyr1850_c190604-sub12_updated_2020-10-08.nc')
 # surfdata_default=xarray.open_dataset(basedir+'/param_files/surfdata_51x63pt_kougarok-NGEE_TransA_simyr1850_c181115default.nc')
 surfdata_default=xarray.open_dataset(basedir+'/param_files/surfdata_Kougarok_defaultPFTs_all-shrubs-decid-boreal.nc')
 
@@ -69,6 +70,76 @@ ecotype_names={'DLST':'Dryas-lichen dwarf shrub tundra',
                'TT'  :'Tussock tundra',
                'Gridcell':'Downscaled grid cell'}
 
+
+obsdata_PFT_mappings={'dwarf shrub deciduous':'arctic_deciduous_shrub_dwarf',
+                        'deciduous dwarf shrub':'arctic_deciduous_shrub_dwarf',
+                      'dwarf shrub evergreen':'arctic_evergreen_shrub_dwarf',
+                      'evergreen shrub':'arctic_evergreen_shrub_dwarf',
+                      'forb':'arctic_forb',
+                      'graminoid':'arctic_dry_graminoid', # **** model has wet and dry graminoids
+                      'lichen':'arctic_lichen',
+                      'low shrub deciduous':'arctic_deciduous_shrub_low',
+                      'deciduous low shrub':'arctic_deciduous_shrub_low',
+                      'mixed':'not_vegetated',            # *****
+                      'moss':'arctic_bryophyte',
+                      'bryophyte':'arctic_bryophyte',
+                        'other':'not_vegetated',          # ***** what to do with this?
+                        'tall shrub deciduous alder':'arctic_deciduous_shrub_alder',
+                        'tall shrub deciduous birch':'arctic_deciduous_shrub_tall', # **** Model is not separating birch and willow
+                        'tall shrub deciduous willow':'arctic_deciduous_shrub_tall', # **** Model is not separating birch and willow
+                        'potential tall shrub deciduous alder':'arctic_deciduous_shrub_alder',
+                        'potential tall shrub deciduous birch':'arctic_deciduous_shrub_tall', # **** Model is not separating birch and willow
+                        'potential tall shrub deciduous willow':'arctic_deciduous_shrub_tall', # **** Model is not separating birch and willow
+                        'potential tall shrub deciduous non-alder':'arctic_deciduous_shrub_tall',
+                        'deciduous low to tall willow and birch shrub':'arctic_deciduous_shrub_tall',
+                        'deciduous low to tall alder shrub':'arctic_deciduous_shrub_alder',
+                        'non-vegetated':'not_vegetated'
+                        }
+                        
+obsdata_defaultPFT_mappings={'dwarf shrub deciduous':'broadleaf_deciduous_boreal_shrub',
+                      'dwarf shrub evergreen':'broadleaf_evergreen_shrub',
+                      'forb':'c3_arctic_grass',
+                      'graminoid':'c3_arctic_grass', # **** model has wet and dry graminoids
+                      'lichen':'nonvascular',
+                      'low shrub deciduous':'broadleaf_deciduous_boreal_shrub',
+                      'mixed':'not_vegetated',            # *****
+                      'moss':'nonvascular',
+                      'bryophyte':'nonvascular',
+                        'other':'not_vegetated',          # ***** what to do with this?
+                        'tall shrub deciduous alder':'broadleaf_deciduous_boreal_shrub',
+                        'tall shrub deciduous birch':'broadleaf_deciduous_boreal_shrub', # **** Model is not separating birch and willow
+                        'tall shrub deciduous willow':'broadleaf_deciduous_boreal_shrub', # **** Model is not separating birch and willow
+                        'potential tall shrub deciduous alder':'broadleaf_deciduous_boreal_shrub',
+                        'potential tall shrub deciduous birch':'broadleaf_deciduous_boreal_shrub', # **** Model is not separating birch and willow
+                        'potential tall shrub deciduous willow':'broadleaf_deciduous_boreal_shrub', # **** Model is not separating birch and willow
+                        'potential tall shrub deciduous non-alder':'broadleaf_deciduous_boreal_shrub'
+                        }
+
+obsdata_E3SMPFT_mappings={'dwarf shrub deciduous':'broadleaf_deciduous_boreal_shrub',
+                      'dwarf shrub evergreen':'broadleaf_deciduous_boreal_shrub',
+                      'forb':'c3_arctic_grass',
+                      'graminoid':'c3_arctic_grass', # **** model has wet and dry graminoids
+                      'lichen':'nonvascular',
+                      'low shrub deciduous':'broadleaf_deciduous_boreal_shrub',
+                      'mixed':'not_vegetated',            # *****
+                      'moss':'nonvascular',
+                      'bryophyte':'nonvascular',
+                        'other':'not_vegetated',          # ***** what to do with this?
+                        'tall shrub deciduous alder':'broadleaf_deciduous_boreal_shrub',
+                        'tall shrub deciduous birch':'broadleaf_deciduous_boreal_shrub', # **** Model is not separating birch and willow
+                        'tall shrub deciduous willow':'broadleaf_deciduous_boreal_shrub', # **** Model is not separating birch and willow
+                        'potential tall shrub deciduous alder':'broadleaf_deciduous_boreal_shrub',
+                        'potential tall shrub deciduous birch':'broadleaf_deciduous_boreal_shrub', # **** Model is not separating birch and willow
+                        'potential tall shrub deciduous willow':'broadleaf_deciduous_boreal_shrub', # **** Model is not separating birch and willow
+                        'potential tall shrub deciduous non-alder':'broadleaf_deciduous_boreal_shrub'
+                        }
+
+default_new_mappings={'broadleaf_evergreen_shrub':'arctic_evergreen_shrub_dwarf',
+                      'broadleaf_deciduous_boreal_shrub':'arctic_deciduous_shrub_tall',
+                      'c3_arctic_grass':'arctic_dry_graminoid'}
+
+
+
 pft_colors_dict={
  'not_vegetated':'0.9',
  'arctic_lichen':'#FF8236',
@@ -93,6 +164,21 @@ pft_colors_default[pft_names_default.index('needleleaf_evergreen_boreal_tree')]=
 
 PFT_percents=pandas.DataFrame(data=surfdata.PCT_NAT_PFT.values.squeeze(),index=pft_names,columns=landscape_ecotypes)
 PFT_percents_default=pandas.DataFrame(data=surfdata_default.PCT_NAT_PFT.values.squeeze(),index=pft_names_default[:17],columns=landscape_ecotypes)
+
+# Read directly from Amy's spreadsheet to make sure model relative areas are the same as her latest measurements
+PFT_percents_latest=pandas.read_excel('../obs_data/ngee_arctic_pft_tallies_kougarok_20191010.xlsx',sheet_name='KG_bar_graphs',header=3,nrows=10,usecols=range(7),index_col=0).rename(
+    columns={
+    'Dryas-lichen dwarf shrub tundra':'DLST',
+    'Birch-Ericaceous lichen shrub tundra':'BEL',
+    'Alder shrubland':'AS',
+    'Willow-birch tundra':'WBT',
+    'Alder savanna':'ASV',
+    'Tussock-lichen tundra':'TT'
+},index=obsdata_PFT_mappings)
+PFT_percents_latest.loc['arctic_evergreen_shrub_tall']=0 
+PFT_percents_latest.loc['arctic_wet_graminoid']=0 
+PFT_percents_latest['ASV']['arctic_lichen']=PFT_percents_latest['ASV']['arctic_lichen']+0.01
+PFT_percents_latest=PFT_percents_latest.loc[pft_names]
 
 surfdata_E3SM=xarray.open_dataset('../param_files/surfdata_Kougarok_downscaled_PFTs_soildepths.nc')
 PFT_percents_E3SM=pandas.DataFrame(data=surfdata_E3SM.PCT_NAT_PFT.values.squeeze(),index=pft_names_default[:17],columns=landscape_ecotypes)
@@ -214,67 +300,6 @@ Koug_meas_biomass=pandas.read_excel(basedir+'/obs_data/NGEE Arctic Veg data comp
     .set_index(['Ecotype','PlotID','ELM_PFT'])
 Koug_meas_chem=pandas.read_excel(basedir+'/obs_data/NGEE Arctic Veg data compiled 4May2020/Kougarok_Q3ELM_KougarokSLA&Chemistry_20200504.xlsx',sheet_name='data')\
     .set_index(['Ecotype','PlotID','ELM_PFT'])
-
-obsdata_PFT_mappings={'dwarf shrub deciduous':'arctic_deciduous_shrub_dwarf',
-                      'dwarf shrub evergreen':'arctic_evergreen_shrub_dwarf',
-                      'forb':'arctic_forb',
-                      'graminoid':'arctic_dry_graminoid', # **** model has wet and dry graminoids
-                      'lichen':'arctic_lichen',
-                      'low shrub deciduous':'arctic_deciduous_shrub_low',
-                      'mixed':'not_vegetated',            # *****
-                      'moss':'arctic_bryophyte',
-                      'bryophyte':'arctic_bryophyte',
-                        'other':'not_vegetated',          # ***** what to do with this?
-                        'tall shrub deciduous alder':'arctic_deciduous_shrub_alder',
-                        'tall shrub deciduous birch':'arctic_deciduous_shrub_tall', # **** Model is not separating birch and willow
-                        'tall shrub deciduous willow':'arctic_deciduous_shrub_tall', # **** Model is not separating birch and willow
-                        'potential tall shrub deciduous alder':'arctic_deciduous_shrub_alder',
-                        'potential tall shrub deciduous birch':'arctic_deciduous_shrub_tall', # **** Model is not separating birch and willow
-                        'potential tall shrub deciduous willow':'arctic_deciduous_shrub_tall', # **** Model is not separating birch and willow
-                        'potential tall shrub deciduous non-alder':'arctic_deciduous_shrub_tall'
-                        }
-                        
-obsdata_defaultPFT_mappings={'dwarf shrub deciduous':'broadleaf_deciduous_boreal_shrub',
-                      'dwarf shrub evergreen':'broadleaf_evergreen_shrub',
-                      'forb':'c3_arctic_grass',
-                      'graminoid':'c3_arctic_grass', # **** model has wet and dry graminoids
-                      'lichen':'nonvascular',
-                      'low shrub deciduous':'broadleaf_deciduous_boreal_shrub',
-                      'mixed':'not_vegetated',            # *****
-                      'moss':'nonvascular',
-                      'bryophyte':'nonvascular',
-                        'other':'not_vegetated',          # ***** what to do with this?
-                        'tall shrub deciduous alder':'broadleaf_deciduous_boreal_shrub',
-                        'tall shrub deciduous birch':'broadleaf_deciduous_boreal_shrub', # **** Model is not separating birch and willow
-                        'tall shrub deciduous willow':'broadleaf_deciduous_boreal_shrub', # **** Model is not separating birch and willow
-                        'potential tall shrub deciduous alder':'broadleaf_deciduous_boreal_shrub',
-                        'potential tall shrub deciduous birch':'broadleaf_deciduous_boreal_shrub', # **** Model is not separating birch and willow
-                        'potential tall shrub deciduous willow':'broadleaf_deciduous_boreal_shrub', # **** Model is not separating birch and willow
-                        'potential tall shrub deciduous non-alder':'broadleaf_deciduous_boreal_shrub'
-                        }
-
-obsdata_E3SMPFT_mappings={'dwarf shrub deciduous':'broadleaf_deciduous_boreal_shrub',
-                      'dwarf shrub evergreen':'broadleaf_deciduous_boreal_shrub',
-                      'forb':'c3_arctic_grass',
-                      'graminoid':'c3_arctic_grass', # **** model has wet and dry graminoids
-                      'lichen':'nonvascular',
-                      'low shrub deciduous':'broadleaf_deciduous_boreal_shrub',
-                      'mixed':'not_vegetated',            # *****
-                      'moss':'nonvascular',
-                      'bryophyte':'nonvascular',
-                        'other':'not_vegetated',          # ***** what to do with this?
-                        'tall shrub deciduous alder':'broadleaf_deciduous_boreal_shrub',
-                        'tall shrub deciduous birch':'broadleaf_deciduous_boreal_shrub', # **** Model is not separating birch and willow
-                        'tall shrub deciduous willow':'broadleaf_deciduous_boreal_shrub', # **** Model is not separating birch and willow
-                        'potential tall shrub deciduous alder':'broadleaf_deciduous_boreal_shrub',
-                        'potential tall shrub deciduous birch':'broadleaf_deciduous_boreal_shrub', # **** Model is not separating birch and willow
-                        'potential tall shrub deciduous willow':'broadleaf_deciduous_boreal_shrub', # **** Model is not separating birch and willow
-                        'potential tall shrub deciduous non-alder':'broadleaf_deciduous_boreal_shrub'
-                        }
-
-default_new_mappings={'broadleaf_evergreen_shrub':'arctic_evergreen_shrub_dwarf',
-                      'broadleaf_deciduous_boreal_shrub':'arctic_deciduous_shrub_tall',
-                      'c3_arctic_grass':'arctic_dry_graminoid'}
 
 # Data from Amy measurements: doi:10.5440/1465967
 Breen_data=pandas.read_csv('../obs_data/ngee_arctic_kougarok_2016_veg_comp_env_table_v1_20180828.csv',header=0,skiprows=[1,2],skipinitialspace=True).dropna(axis='index',how='all')

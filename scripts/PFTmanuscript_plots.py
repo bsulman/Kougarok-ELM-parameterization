@@ -8,7 +8,8 @@ warnings.filterwarnings(action='ignore',message='Mean of empty slice')
 
 
 e3sm_all=xarray.open_dataset('../../output_data/Kougarok_SNAP_rhizomefixed_E3SMpfts_20200518_h2_processed.nc',decode_times=True)
-arcticpfts_all=xarray.open_dataset('../../output_data/Kougarok_SNAP_bzdormancy_Arcticpfts_20200716_h2_processed.nc',decode_times=True) # This is with dormancy set to -1 C and root_a params fixed
+# arcticpfts_all=xarray.open_dataset('../../output_data/Kougarok_SNAP_bzdormancy_Arcticpfts_20200716_h2_processed.nc',decode_times=True) # This is with dormancy set to -1 C and root_a params fixed
+arcticpfts_all=xarray.open_dataset('../../output_data/Kougarok_SNAP_updatedPFTareas_Arcticpfts_20201009_h2_processed.nc',decode_times=True)
 # soilthickness_all=xarray.open_dataset('../../output_data/Kougarok_SNAP_rhizomefixed_E3SMpfts_soilthickness_20200422_h2_all_processed.nc',decode_times=True)
 communities_all=xarray.open_dataset('../../output_data/Kougarok_SNAP_rhizomefixed_E3SMpfts_communities_20200515_h2_processed.nc',decode_times=True) # 515 changed to RCP8.5 CO2 etc
 
@@ -625,8 +626,8 @@ for num,pft in enumerate(axs):
 for pft in axs:
     xdata=ma.masked_invalid([l.get_xdata() for l in axs[pft].lines if l.get_linestyle() is 'None' and l.get_alpha() is None])
     ydata=ma.masked_invalid([l.get_ydata() for l in axs[pft].lines if l.get_linestyle() is 'None' and l.get_alpha() is None])
-    data=row_stack((xdata.ravel(),ydata.ravel()))
-    print('%s: R2 = %1.2g, N = %d'%(pft,corrcoef(data)[0,1]**2,data.shape[1]))
+    data=ma.row_stack((xdata.ravel(),ydata.ravel()))
+    print('%s: R2 = %1.2g, N = %d'%(pft,corrcoef(ma.compress_cols(data))[0,1]**2,data.shape[1]))
 
 handles=[Line2D([0,0],[0,0],ls='None',marker=markers[m],c='k',ms=8.0,mfc='None') for m in ecotypes_included]
 labels=[landscape_ecotypes[e] for e in ecotypes_included]
@@ -772,7 +773,8 @@ def max_rooting_depth(a,b,thresh=0.99):
     return opt.fsolve(zfunc0,x0=1/min(a,b),args=(a,b,thresh))
 
 # Active layer thickness
-columndata_arcticpfts=xarray.open_dataset('../../output_data/Kougarok_SNAP_bzdormancy_Arcticpfts_20200715_h0.nc').sel(time=slice(start,end))
+# columndata_arcticpfts=xarray.open_dataset('../../output_data/Kougarok_SNAP_bzdormancy_Arcticpfts_20200715_h0.nc').sel(time=slice(start,end))
+columndata_arcticpfts=xarray.open_dataset('../../output_data/Kougarok_SNAP_updatedPFTareas_Arcticpfts_20201009_h0.nc').sel(time=slice(start,end))
 columndata_soildepth=xarray.open_dataset('../../output_data/E3SMpfts_soilthickness_20200316_h0.nc')
 month=array([t.item().month for t in columndata_arcticpfts.time])
 july_ALT=columndata_arcticpfts['ALT'].isel(time=(month==7)).mean(dim='time')
