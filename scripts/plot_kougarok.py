@@ -126,7 +126,7 @@ def plot_mod_bar_stack(x,dat,econum,do_legend=False,op='max',**kwargs):
     return handles
 
 
-def plot_obs_bar_stack(x,obsdata,ecotype_num,bottom=0.0,pfts=None,**kwargs):
+def plot_obs_bar_stack(x,obsdata,ecotype_num,bottom=0.0,pfts=None,ebar_args={},**kwargs):
     names=[]
     if pfts is None:
         pfts=unique(obsdata[landscape_ecotypes[ecotype_num]].index.get_level_values('ELM_PFT'))
@@ -140,7 +140,7 @@ def plot_obs_bar_stack(x,obsdata,ecotype_num,bottom=0.0,pfts=None,**kwargs):
 
         if ~isnan(val):
             bar(x,val,bottom=bottom,facecolor=pft_colors[(pft_names.index(obsdata_PFT_mappings[pft]))],**kwargs)
-            errorbar(x+num/len(pfts)*0.25*kwargs.get('width',1.0),bottom+val,yerr=valstd,fmt='none',color=pft_colors[(pft_names.index(obsdata_PFT_mappings[pft]))])
+            errorbar(x+(-.25+num/len(pfts)*0.5)*kwargs.get('width',1.0),bottom+val,yerr=valstd,fmt='none',color=pft_colors[(pft_names.index(obsdata_PFT_mappings[pft]))],**ebar_args)
             bottom=bottom+val
 
 

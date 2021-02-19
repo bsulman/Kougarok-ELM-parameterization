@@ -79,21 +79,21 @@ for econum in range(len(ecotype_names_list)):
     # axvline(offset-0.5,c='k',ls=':')
 
     sca(axs[1,econum])
-    plot_obs_bar_stack(x+offset,meas_nonvasc_C ,econum,width=0.2,pfts=['lichen','bryophyte'])
+    plot_obs_bar_stack(x+offset,meas_nonvasc_C ,econum,width=0.2,pfts=['lichen','bryophyte'],ebar_args={'elinewidth':1.1,'capsize':3.0})
     names.append('Nonvascular')
     ticlocs.append(x+offset)
     
     sca(ax)
     # x+=1.3
     
-    plot_obs_bar_stack(x+offset,meas_leaf_C+meas_stem_C ,econum,width=0.2,pfts=pft_order)
+    plot_obs_bar_stack(x+offset,meas_leaf_C+meas_stem_C ,econum,width=0.2,pfts=pft_order,ebar_args={'elinewidth':1.1,'capsize':3.0})
     names.append('Vascular')
 
-    plot_obs_bar_stack(x+offset,-meas_rhizome_C,econum,width=0.2)
+    plot_obs_bar_stack(x+offset,-meas_rhizome_C,econum,width=0.2,ebar_args={'elinewidth':1.1,'capsize':3.0})
 
     
     bar(x+offset,-meas_root_C[landscape_ecotypes[econum]].mean(),yerr=meas_root_C[landscape_ecotypes[econum]].std(),width=0.2,facecolor=[0.9,0.9,0.9],edgecolor='k',linewidth=0.5,linestyle='--',
-            bottom=-meas_rhizome_C[landscape_ecotypes[econum]].sum(level='PlotID').mean() )
+            bottom=-meas_rhizome_C[landscape_ecotypes[econum]].sum(level='PlotID').mean() ,capsize=3.0)
     
     ticlocs.append(x+offset)
     
@@ -120,9 +120,14 @@ for pftnum in pfts_Arctic[1:]:
         name = 'Graminoid'
     handles.append(Rectangle([0,0],0,0,facecolor=data_Arcticpfts.PFTcolors.values[pftnum],label=name ))
 handles.append(Rectangle([0,0],0,0,facecolor=[0.9,0.9,0.9],edgecolor='k',linewidth=0.5,linestyle='--',label='Pooled fine roots' ))
+handles[0].set_hatch('..')
 l=axs[0,2].legend(handles=handles,fontsize='medium',ncol=5,title='Arctic PFTs',loc=(0,-0.6))
 l.set_in_layout(False)
 
+# One reviewer had trouble distinguishing the lichen and bryophyte colors, so adding hatching to lichen
+for ax in axs[1,:]:
+    ax.patches[0].set_hatch('..')
+    ax.patches[2].set_hatch('..')
 
 from string import ascii_lowercase
 for econum in range(len(ecotype_names_list)):
@@ -152,6 +157,9 @@ plot_PFT_distributions(axs)
 axs[0].set_title('(a) Simulation 1')
 axs[1].set_title('(b) Simulation 2')
 axs[2].set_title('(c) Simulation 3')
+axs[0].set_ylim(top=100)
+axs[1].set_ylim(top=100)
+axs[2].set_ylim(top=100)
 
 
 barfig_PFT,axs=subplots(nrows=2,ncols=5,num='Biomass comparison by PFT',figsize=(12,6),clear=True,squeeze=False);
@@ -369,6 +377,20 @@ plot_timeseries(get_var_PFTs('TOTVEGC', arcticpfts_all),axs,plot_sum=False,ymax=
 l=axs[0,0].legend(loc=(0,-0.4),ncol=5)
 l.set_in_layout(False)
 
+f,axs=subplots(nrows=2,ncols=3,num='Total biomass per area (Arctic PFTs)',clear=True,figsize=(12,6))
+f.set_constrained_layout_pads(hspace=0.18)
+plot_timeseries(get_var_PFTs('TOTVEGC', arcticpfts_all,weight_area=False),axs,plot_sum=False,ymax=None,ymin=-10,leg_ax=None)
+l=axs[0,0].legend(loc=(0,-0.4),ncol=5)
+l.set_in_layout(False)
+
+f,axs=subplots(nrows=2,ncols=3,num='Total biomass per area percent change (Arctic PFTs)',clear=True,figsize=(12,6))
+f.set_constrained_layout_pads(hspace=0.18)
+plot_timeseries(get_var_PFTs('TOTVEGC', arcticpfts_all,weight_area=False)/get_var_PFTs('TOTVEGC', arcticpfts_all,weight_area=False).isel(time=0)*100-100,axs,plot_sum=False,ymax=None,ymin=-10,leg_ax=None)
+l=axs[0,0].legend(loc=(0,-0.4),ncol=5)
+l.set_in_layout(False)
+for ax in axs.ravel():
+    ax.set_ylabel('Percent change in PFT biomass')
+
     
 f,axs=subplots(nrows=2,ncols=3,num='Total biomass (communities)',clear=True,figsize=(12,6))
 plot_timeseries(get_var_PFTs('TOTVEGC', communities_all),axs,True)
@@ -397,7 +419,7 @@ obs=(meas_leaf_C + meas_stem_C + meas_rhizome_C).add(meas_nonvasc_C,fill_value=0
 mod_new=get_var_PFTs(['LIVESTEMC','DEADSTEMC','LEAFC','LIVECROOTC','DEADCROOTC'],data_Arcticpfts)
 mod_soildepth=get_var_PFTs(['LIVESTEMC','DEADSTEMC','LEAFC','LIVECROOTC','DEADCROOTC'],data_communities)
 
-markers=['o','s','x','^','>','*']
+markers=['o','s','h','^','>','*']
 
 f,axs=subplots(ncols=3,nrows=2,num='Model-data comparison by community',clear=True,squeeze=False)
 ecotypes_included=range(6)#[4,5]
@@ -552,7 +574,6 @@ axs['broadleaf_deciduous_boreal_shrub']=f.add_subplot(gs[0,0])
 axs['c3_arctic_grass']=f.add_subplot(gs[0,1])
 
 
-
 gs_new=gs[2,:].subgridspec(ncols=7,nrows=2,width_ratios=[1,10,10,1,10,10,1])
 
 axs['arctic_evergreen_shrub_dwarf']=f.add_subplot(gs_new[0,1])
@@ -582,8 +603,8 @@ r4=f.add_artist(Rectangle(xy=(0.53,0.01),width=.98-.53,height=0.53,zorder=-10,fa
 r5=f.add_artist(Rectangle(xy=(0.03,0.58),width=0.93,height=0.999-0.58,facecolor='0.95',zorder=-11))
 r6=f.add_artist(Rectangle(xy=(0.00,0.0),width=1,height=0.57,facecolor='0.95',zorder=-11))
 
-t=f.text(0.5,0.55,'Simulation 3',fontsize='x-large',ha='center')    
-t2=f.suptitle('Simulation 2',fontsize='x-large')
+t=f.text(0.5,0.55,'Arctic PFTs',fontsize='x-large',ha='center')    
+t2=f.suptitle('Default PFTs',fontsize='x-large')
 
 ecotypes_included=range(6)#[4,5]
 for econum in ecotypes_included:#range(len(ecotype_names_list)):
@@ -603,17 +624,22 @@ for econum in ecotypes_included:#range(len(ecotype_names_list)):
     for pft in [11,12]:
         if 'shrub' in mod_soildepth['PFTnames'][pft].item():
             ax=axs['broadleaf_deciduous_boreal_shrub']
+            y2=mod_new.isel(ecotype=econum,PFT=mod_new.PFTnames.str.contains('shrub')).sum(dim='PFT').max(dim='time')
         else:
             ax=axs['c3_arctic_grass']
+
         x=obs_to_defaultPFTs(obs,obsdata_defaultPFT_mappings)[landscape_ecotypes[econum]][:,data_global.PFTnames[pft].item()].mean()
         xerr=obs_to_defaultPFTs(obs,obsdata_defaultPFT_mappings)[landscape_ecotypes[econum]][:,data_global.PFTnames[pft].item()].std(ddof=0)
         y=mod_soildepth.isel(ecotype=min(econum,len(mod_soildepth.ecotype)-1),PFT=pft).max(dim='time')
+
         if x>0 or y>0:
             ax.errorbar(x,y,c=data_global.PFTcolors[pft].item(),ls='None',marker=markers[econum],xerr=xerr,ms=8.0,mfc='None')
+        if x>0 and 'shrub' in mod_soildepth['PFTnames'][pft].item():
+            ax.errorbar(x,y2,c=data_global.PFTcolors[pft].item(),ls='None',marker=markers[econum],xerr=xerr,ms=8.0)
     x=obs_to_defaultPFTs(obs,obsdata_defaultPFT_mappings)[landscape_ecotypes[econum]][:,'nonvascular'].mean()
-    y=0.0
-    if x>0:
-        ax.errorbar(x,y,c=data_Arcticpfts.PFTcolors[1].item(),ls='None',marker=markers[econum],xerr=xerr,ms=8.0,alpha=0.5,mfc='None')
+    # y=0.0
+    # if x>0:
+    #     ax.errorbar(x,y,c=data_Arcticpfts.PFTcolors[1].item(),ls='None',marker=markers[econum],xerr=xerr,ms=8.0,alpha=0.5,mfc='None')
 
 for num,pft in enumerate(axs):
     axs[pft].set(title=prettify_pft_name(pft),xlabel='Obs Biomass (gC m$^{-2}$)',ylabel='Mod Biomass (gC m$^{-2}$)',aspect=1.0)
@@ -631,7 +657,91 @@ for pft in axs:
 
 handles=[Line2D([0,0],[0,0],ls='None',marker=markers[m],c='k',ms=8.0,mfc='None') for m in ecotypes_included]
 labels=[landscape_ecotypes[e] for e in ecotypes_included]
-axs['broadleaf_deciduous_boreal_shrub'].legend(handles=handles,labels=labels,fontsize='medium',loc='upper right')
+axs['broadleaf_deciduous_boreal_shrub'].legend(handles=handles,labels=labels,fontsize='medium',loc='upper right',ncol=2)
+
+axs['broadleaf_deciduous_boreal_shrub'].set_yticks([0,2000,4000,6000])
+axs['c3_arctic_grass'].set_yticks([0,25,50])
+axs['arctic_evergreen_shrub_dwarf'].set_xticks([0,150,300])
+axs['arctic_evergreen_shrub_dwarf'].set_yticks([0,150,300])
+axs['arctic_deciduous_shrub_low'].set_yticks([0,500,1000])
+axs['arctic_deciduous_shrub_tall'].set_yticks([0,250,500])
+axs['arctic_deciduous_shrub_alder'].set_yticks([0,2500,5000])
+axs['arctic_dry_graminoid'].set_xticks([0,20,40,60])
+axs['arctic_forb'].set_xticks([0,2,4,6])
+axs['arctic_bryophyte'].set_xticks([0,50,100,150])
+
+
+f,ax=subplots(num='Total biomass 1-1',clear=True)
+x=obs.groupby(['Ecotype','PlotID']).sum().mean(level='Ecotype')
+xerr=obs.groupby(['Ecotype','PlotID']).sum().std(level='Ecotype')
+y=mod_soildepth.max(dim='time').sum(dim='PFT')
+y2=mod_new.max(dim='time').sum(dim='PFT')
+for n,e in enumerate(landscape_ecotypes):
+    ax.errorbar(x[e],y[n],xerr=xerr[e],marker=markers[n],c='k',ms=8.0,mfc='None')
+    ax.errorbar(x[e],y2[n],xerr=xerr[e],marker=markers[n],c='b',ms=8.0,label=e)
+maxval=max([x.max(),y.max(),y2.max()]) 
+ax.plot([0,maxval],[0,maxval],'k:',lw=0.5)
+ax.set(aspect=1.0,xlabel='Obs Biomass (gC m$^{-2}$)',ylabel='Mod Biomass (gC m$^{-2}$)',title='Total biomass comparison')
+ax.legend()
+
+# 1-1 plots but using biomass per unit area
+
+f=figure('PFT comp 2 per area',clear=True,figsize=(6.4,4.8))
+mod_new_perarea=get_var_PFTs(['LIVESTEMC','DEADSTEMC','LEAFC','LIVECROOTC','DEADCROOTC'],data_Arcticpfts,weight_area=False)
+
+axs={}
+
+gs=f.add_gridspec(ncols=4,nrows=2)
+
+axs['arctic_evergreen_shrub_dwarf']=f.add_subplot(gs[0,0])
+
+axs['arctic_deciduous_shrub_low']=f.add_subplot(gs[0,1])
+axs['arctic_deciduous_shrub_tall']=f.add_subplot(gs[1,0])
+axs['arctic_deciduous_shrub_alder']=f.add_subplot(gs[1,1])
+
+axs['arctic_dry_graminoid']=f.add_subplot(gs[0,2])
+axs['arctic_forb']=f.add_subplot(gs[0,3])
+
+axs['arctic_bryophyte']=f.add_subplot(gs[1,2])
+axs['arctic_lichen']=f.add_subplot(gs[1,3])
+
+pfts_inuse=data_Arcticpfts['PFT'][(data_Arcticpfts.weights>0).any(dim='ecotype')].data.tolist()
+
+ecotypes_included=range(6)#[4,5]
+for econum in ecotypes_included:#range(len(ecotype_names_list)):
+    plotIDs=unique(obs[landscape_ecotypes[econum]].index.get_level_values('PlotID'))
+    for pft in unique(obs.index.get_level_values('ELM_PFT')):
+        if obsdata_PFT_mappings[pft] not in axs or 'birch' in pft or 'willow' in pft:
+            continue
+        if pft in obs[landscape_ecotypes[econum]].index.get_level_values('ELM_PFT'):
+            ax=axs[obsdata_PFT_mappings[pft]]
+
+            areafracs=array([get_taxon_areas(pftareas,pft,landscape_ecotypes[econum],'NGEE_PFT')['KG_%s%s_VgComp'%(landscape_ecotypes[econum],plotID.split('-')[-1])].sum()/100 for plotID in plotIDs])
+            x=ma.masked_invalid(obs[landscape_ecotypes[econum]][:,pft]/areafracs).mean()
+            xerr=ma.masked_invalid(obs[landscape_ecotypes[econum]][:,pft]/areafracs).std(ddof=0)
+            pftnum=list(data_Arcticpfts.PFTnames.to_masked_array()).index(obsdata_PFT_mappings[pft])
+            y=mod_new_perarea.isel(ecotype=econum,PFT=pftnum).max(dim='time')
+            if x>0 or y>0:
+                ax.errorbar(x,y,c=data_Arcticpfts.PFTcolors[pftnum].item(),ls='None',marker=markers[econum],xerr=xerr,ms=7.0,mfc='None')
+
+for num,pft in enumerate(axs):
+    axs[pft].set(title=prettify_pft_name(pft),xlabel='Area-normalized obs biomass (gC m$^{-2}$)',ylabel='Area-normalized mod biomass (gC m$^{-2}$)',aspect=1.0)
+    maxval=max(axs[pft].get_ylim()[1],axs[pft].get_xlim()[1])
+    axs[pft].plot([0,maxval],[0,maxval],'k:',lw=0.5)
+    axs[pft].text(0.02,0.92,'('+ascii_lowercase[num]+')',transform=axs[pft].transAxes)
+    
+# Calculate R2 for each plot. Reading the data from the plots themselves since the plotting order was not by PFT
+# linestyle and alpha business is to exclude 1-1 line and the pooled nonvascular points in Sim2 grass panel
+for pft in axs:
+    xdata=ma.masked_invalid([l.get_xdata() for l in axs[pft].lines if l.get_linestyle() is 'None' and l.get_alpha() is None])
+    ydata=ma.masked_invalid([l.get_ydata() for l in axs[pft].lines if l.get_linestyle() is 'None' and l.get_alpha() is None])
+    data=ma.row_stack((xdata.ravel(),ydata.ravel()))
+    print('%s: R2 = %1.2g, N = %d'%(pft,corrcoef(ma.compress_cols(data))[0,1]**2,data.shape[1]))
+
+handles=[Line2D([0,0],[0,0],ls='None',marker=markers[m],c='k',ms=8.0,mfc='None') for m in ecotypes_included]
+labels=[landscape_ecotypes[e] for e in ecotypes_included]
+axs['arctic_evergreen_shrub_dwarf'].legend(handles=handles,labels=labels,fontsize='medium',loc='lower right',ncol=2)
+
 
 
 
@@ -676,28 +786,37 @@ def plot_hist(data,ax,color=None,label=None,bottom=None,bins=bins,alpha=0.9,norm
         ax.fill_between(x,bottom,h*norm+bottom,edgecolor=color,facecolor=fc,label=label,**kwargs)
     return h*norm+bottom
 
-overlap=False
+overlap=True
+alpha=0.1
 f,axs=subplots(nrows=4,ncols=1,num='Histograms',clear=True,figsize=(3.8,9.8))
 shrubs=data_global.PFTnames.data.tolist().index('broadleaf_deciduous_boreal_shrub')
 gram=data_global.PFTnames.data.tolist().index('c3_arctic_grass')
-norm=1/(get_var_PFTs('TOTVEGC',data_global).mean(dim='time').count().item()-2)
+if not overlap:
+    norm=1/(get_var_PFTs('TOTVEGC',data_global).mean(dim='time').count().item()-2)
+else:
+    norm=1
 ax=axs[1]
-bottom=plot_hist(get_var_PFTs('TOTVEGC',data_global).isel(PFT=shrubs).mean(dim='time'),ax,linestyle='-',norm=norm,zorder=1)
+bottom=plot_hist(get_var_PFTs('TOTVEGC',data_global).isel(PFT=shrubs).mean(dim='time'),ax,linestyle='-',norm=norm,zorder=1,alpha=alpha)
 if overlap:
     bottom[:]=0
-bottom=plot_hist(get_var_PFTs('TOTVEGC',data_global).isel(PFT=gram).mean(dim='time'),ax,linestyle='--',bottom=bottom,norm=norm)
+bottom=plot_hist(get_var_PFTs('TOTVEGC',data_global).isel(PFT=gram).mean(dim='time'),ax,linestyle='--',bottom=bottom,norm=norm,alpha=alpha)
 ax.set_title('Simulation 1')
 ax.legend(handles=ax.collections[::-1])
 ax.set_ylabel('Fraction of patches')
 
 shrubs=data_communities.PFTnames.data.tolist().index('broadleaf_deciduous_boreal_shrub')
 gram=data_communities.PFTnames.data.tolist().index('c3_arctic_grass')
-norm=1/(get_var_PFTs('TOTVEGC',data_communities).mean(dim='time').count().item()-2)
+if not overlap:
+    norm=1/(get_var_PFTs('TOTVEGC',data_communities).mean(dim='time').count().item()-2)
+else:
+    norm=1/len(landscape_ecotypes)
 ax=axs[2]
-bottom=plot_hist(get_var_PFTs('TOTVEGC',data_communities).isel(PFT=shrubs).mean(dim='time'),ax,linestyle='-',norm=norm,zorder=1)
 if overlap:
     bottom[:]=0
-bottom=plot_hist(get_var_PFTs('TOTVEGC',data_communities).isel(PFT=gram).mean(dim='time'),ax,linestyle='--',bottom=bottom,norm=norm)
+bottom=plot_hist(get_var_PFTs('TOTVEGC',data_communities).isel(PFT=shrubs).mean(dim='time'),ax,linestyle='-',norm=norm,zorder=1,alpha=alpha)
+if overlap:
+    bottom[:]=0
+bottom=plot_hist(get_var_PFTs('TOTVEGC',data_communities).isel(PFT=gram).mean(dim='time'),ax,linestyle='--',bottom=bottom,norm=norm,alpha=alpha)
 ax.set_title('Simulation 2')
 
 ax.set_ylabel('Fraction of patches')
@@ -707,48 +826,66 @@ pft_order_meas=['bryophyte', 'dwarf shrub deciduous', 'dwarf shrub evergreen',
        'potential tall shrub deciduous non-alder','potential tall shrub deciduous alder']
 
 pft_order=[pft_names.index(obsdata_PFT_mappings[name]) for name in pft_order_meas]  
-norm=1/(get_var_PFTs('TOTVEGC',data_Arcticpfts).mean(dim='time').count().item()-1)
+if not overlap:
+    norm=1/(get_var_PFTs('TOTVEGC',data_Arcticpfts).mean(dim='time').count().item()-1)
+else:
+    norm=1/len(landscape_ecotypes)
 bottom[:]=0
 ax=axs[3]
 for pft in pft_order:
     if 'shrub' in pft_names[pft] and pft_names.index(pft_names[pft]) in pfts_inuse:
-        bottom=plot_hist(get_var_PFTs('TOTVEGC',data_Arcticpfts).isel(PFT=pft).mean(dim='time'),ax=ax,bottom=bottom,linestyle='-',norm=norm,zorder=2)
+        bottom=plot_hist(get_var_PFTs('TOTVEGC',data_Arcticpfts).isel(PFT=pft).mean(dim='time'),ax=ax,bottom=bottom,linestyle='-',norm=norm,zorder=2,alpha=alpha)
+        if overlap:
+            bottom[:]=0
 
 if overlap:
     bottom[:]=0
 for pft in pft_order:
     if 'forb' in pft_names[pft] or 'graminoid' in pft_names[pft] and pft_names.index(pft_names[pft]) in pfts_inuse:
-        bottom=plot_hist(get_var_PFTs('TOTVEGC',data_Arcticpfts).isel(PFT=pft).mean(dim='time'),ax=ax,bottom=bottom,linestyle='--',norm=norm)
+        bottom=plot_hist(get_var_PFTs('TOTVEGC',data_Arcticpfts).isel(PFT=pft).mean(dim='time'),ax=ax,bottom=bottom,linestyle='--',norm=norm,alpha=alpha)
+        if overlap:
+            bottom[:]=0
 ax.set_title('Arctic PFTs')
 
 if overlap:
     bottom[:]=0
 for pft in pft_order:
     if 'bryophyte' in pft_names[pft] or 'lichen' in pft_names[pft] and pft_names.index(pft_names[pft]) in pfts_inuse:
-        bottom=plot_hist(get_var_PFTs('TOTVEGC',data_Arcticpfts).isel(PFT=pft).mean(dim='time'),ax=ax,bottom=bottom,linestyle=':',norm=norm,zorder=-1)
+        bottom=plot_hist(get_var_PFTs('TOTVEGC',data_Arcticpfts).isel(PFT=pft).mean(dim='time'),ax=ax,bottom=bottom,linestyle=':',norm=norm,zorder=-1,alpha=alpha)
+        if overlap:
+            bottom[:]=0
 ax.set_title('Simulation 3')
 
 ax.set_ylabel('Fraction of patches')
 
 totalC=meas_leaf_C+meas_rhizome_C+meas_root_C+meas_stem_C
-norm=1/len(totalC)
+if not overlap:
+    norm=1/len(totalC)
+else:
+    norm=1/len(unique(totalC.index.get_level_values('PlotID')))
 bottom[:]=0
 ax=axs[0]
 for pft in pft_order_meas:
     if 'shrub' in pft:
-        bottom=plot_hist(totalC[:,:,pft],ax=ax,bottom=bottom,color=pft_colors[pft_names.index(obsdata_PFT_mappings[pft])],label='',linestyle='-',norm=norm,zorder=2)
+        bottom=plot_hist(totalC[:,:,pft],ax=ax,bottom=bottom,color=pft_colors[pft_names.index(obsdata_PFT_mappings[pft])],label='',linestyle='-',norm=norm,zorder=2,alpha=alpha)
+        if overlap:
+            bottom[:]=0
 
 if overlap:
     bottom[:]=0
 for pft in pft_order_meas:
     if 'graminoid' in pft or 'forb' in pft:
-        bottom=plot_hist(totalC[:,:,pft],ax=ax,bottom=bottom,color=pft_colors[pft_names.index(obsdata_PFT_mappings[pft])],label='',linestyle='--',norm=norm)
+        bottom=plot_hist(totalC[:,:,pft],ax=ax,bottom=bottom,color=pft_colors[pft_names.index(obsdata_PFT_mappings[pft])],label='',linestyle='--',norm=norm,alpha=alpha)
+        if overlap:
+            bottom[:]=0
 
 if overlap:
     bottom[:]=0
 for pft in pft_order_meas:
     if 'bryophyte' in pft or 'lichen' in pft:
-        bottom=plot_hist(meas_nonvasc_C[:,:,pft],ax=ax,bottom=bottom,color=pft_colors[pft_names.index(obsdata_PFT_mappings[pft])],label='',linestyle=':',norm=norm,zorder=-1)
+        bottom=plot_hist(meas_nonvasc_C[:,:,pft],ax=ax,bottom=bottom,color=pft_colors[pft_names.index(obsdata_PFT_mappings[pft])],label='',linestyle=':',norm=norm,zorder=-1,alpha=alpha)
+        if overlap:
+            bottom[:]=0
 
 ax.set_title('Measurements')
 ax.set_ylabel('Fraction of plots')
@@ -774,8 +911,9 @@ def max_rooting_depth(a,b,thresh=0.99):
 
 # Active layer thickness
 # columndata_arcticpfts=xarray.open_dataset('../../output_data/Kougarok_SNAP_bzdormancy_Arcticpfts_20200715_h0.nc').sel(time=slice(start,end))
-columndata_arcticpfts=xarray.open_dataset('../../output_data/Kougarok_SNAP_updatedPFTareas_Arcticpfts_20201009_h0.nc').sel(time=slice(start,end))
+columndata_arcticpfts=xarray.open_dataset('../../output_data/Kougarok_SNAP_updatedPFTareas_Arcticpfts_20201009_h0.nc')
 columndata_soildepth=xarray.open_dataset('../../output_data/E3SMpfts_soilthickness_20200316_h0.nc')
 month=array([t.item().month for t in columndata_arcticpfts.time])
 july_ALT=columndata_arcticpfts['ALT'].isel(time=(month==7)).mean(dim='time')
 
+figure('Active layer thickness')

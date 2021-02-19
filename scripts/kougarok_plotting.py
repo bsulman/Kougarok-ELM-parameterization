@@ -141,7 +141,7 @@ default_new_mappings={'broadleaf_evergreen_shrub':'arctic_evergreen_shrub_dwarf'
 
 
 pft_colors_dict={
- 'not_vegetated':'0.9',
+ 'not_vegetated':'0.8',
  'arctic_lichen':'#FF8236',
  'arctic_bryophyte':'#BD2D2D',
  'arctic_evergreen_shrub_dwarf':'#FFE802',
@@ -156,7 +156,7 @@ pft_colors_dict={
  
 }
 pft_colors=[pft_colors_dict[name] for name in pft_names]
-pft_colors_default=['0.9' for n in range(len(pft_names_default))]
+pft_colors_default=['0.8' for n in range(len(pft_names_default))]
 pft_colors_default[pft_names_default.index('broadleaf_evergreen_shrub')]='C3'
 pft_colors_default[pft_names_default.index('broadleaf_deciduous_boreal_shrub')]='0.3'
 pft_colors_default[pft_names_default.index('c3_arctic_grass')]=pft_colors_dict['arctic_dry_graminoid']
@@ -509,6 +509,8 @@ def plot_PFT_distributions(axs=None):
     title('E3SM grid PFTs')
     l=legend(labels=names,loc=(0.0,1.1),fontsize='small')
     l.set_draggable(True)
+    l.get_frame().set_facecolor('w')
+    ylabel('PFT percent area')
     
     sca(axs[1])
     names=[]
@@ -525,6 +527,7 @@ def plot_PFT_distributions(axs=None):
     title('Default ELM PFTs, site areas')
     l=legend(labels=names,loc=(0.0,1.1),fontsize='small')
     l.set_draggable(True)
+    l.get_frame().set_facecolor('w')
 
     sca(axs[2])
     names=[]
@@ -546,13 +549,18 @@ def plot_PFT_distributions(axs=None):
     notveg=PFT_percents.loc['not_vegetated']
     allshrubs=PFT_percents[PFT_percents.index.str.contains('shrub')].sum()
     nonshrubs=100-notveg-allshrubs
-    bar(arange(len(landscape_ecotypes)),notveg,facecolor='None',edgecolor=pft_colors_default[pft_names_default.index('not_vegetated')],linewidth=2,linestyle='--',alpha=0.8)
-    bar(arange(len(landscape_ecotypes)),allshrubs,bottom=notveg,facecolor='None',edgecolor=pft_colors_default[pft_names_default.index('broadleaf_deciduous_boreal_shrub')],linewidth=1.5,linestyle='--',alpha=0.8)
-    bar(arange(len(landscape_ecotypes)),nonshrubs,bottom=notveg+allshrubs,facecolor='None',edgecolor=pft_colors_default[pft_names_default.index('c3_arctic_grass')],linewidth=1.5,linestyle='--',alpha=0.8)
+    # bar(arange(len(landscape_ecotypes)),notveg,facecolor='None',edgecolor=pft_colors_default[pft_names_default.index('not_vegetated')],alpha=0.5)
+    bar(arange(len(landscape_ecotypes)),allshrubs,bottom=notveg,facecolor='None',hatch='//',alpha=0.7,edgecolor='w')
+    bar(arange(len(landscape_ecotypes)),nonshrubs,bottom=notveg+allshrubs,facecolor='None',hatch=r'\\',alpha=0.7,edgecolor='w')
+
+    axs[1].bar(arange(len(landscape_ecotypes)),allshrubs,bottom=notveg,facecolor='None',hatch='//',alpha=0.7,edgecolor='w')
+    axs[1].bar(arange(len(landscape_ecotypes)),nonshrubs,bottom=notveg+allshrubs,facecolor='None',hatch=r'\\',alpha=0.7,edgecolor='w')
+
 
     xticks(arange(len(landscape_ecotypes)),landscape_ecotypes,rotation=0)
     title('Arctic PFTs')
     l=legend(labels=names,loc=(0.0,1.1),fontsize='small',ncol=2)
     l.set_draggable(True)
+    l.get_frame().set_facecolor('w')
 
     # tight_layout()
