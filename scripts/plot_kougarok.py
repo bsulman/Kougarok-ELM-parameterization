@@ -71,7 +71,7 @@ def obs_to_defaultPFTs(obsdata,mapping=obsdata_defaultPFT_mappings):
     # Best way I could figure out how to do this, sorry. Making a multilevel index with the same community and plot levels but new PFTs
     new_index=pandas.MultiIndex.from_tuples([(x[0][0],x[0][1],x[1]) for x in pandas.MultiIndex.from_product((obsdata.index.droplevel('ELM_PFT').drop_duplicates().values,unique(list(mapping.values())))).values],names=('Ecotype','PlotID','ELM_PFT')) 
     if isinstance(obsdata,pandas.Series):
-        out=pandas.Series(index=new_index,data=0)
+        out=pandas.Series(index=new_index,data=0.0)
         for pft in unique(obsdata.index.get_level_values('ELM_PFT')):
             out.loc[:,:,mapping[pft]] = out.loc[:,:,mapping[pft]].add( obsdata.loc[:,:,pft].fillna(0.0), fill_value=0.0)
 

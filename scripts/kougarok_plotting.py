@@ -177,13 +177,13 @@ PFT_percents_latest=pandas.read_excel('../obs_data/ngee_arctic_pft_tallies_kouga
 },index=obsdata_PFT_mappings)
 PFT_percents_latest.loc['arctic_evergreen_shrub_tall']=0 
 PFT_percents_latest.loc['arctic_wet_graminoid']=0 
-PFT_percents_latest['ASV']['arctic_lichen']=PFT_percents_latest['ASV']['arctic_lichen']+0.01
+PFT_percents_latest.loc['arctic_lichen','ASV']=PFT_percents_latest.loc['arctic_lichen','ASV']+0.01
 PFT_percents_latest=PFT_percents_latest.loc[pft_names]
 
 surfdata_E3SM=xarray.open_dataset('../param_files/surfdata_Kougarok_downscaled_PFTs_soildepths.nc')
 PFT_percents_E3SM=pandas.DataFrame(data=surfdata_E3SM.PCT_NAT_PFT.values.squeeze(),index=pft_names_default[:17],columns=landscape_ecotypes)
 
-def read_pftfile(filename,maxyear=None,decode_times=True):
+def read_pftfile(filename,maxyear=None,decode_times=True,verbose=False):
     with xarray.open_dataset(filename,decode_times=decode_times) as output_PFTs:
         if maxyear is not None:
             output_PFTs=output_PFTs.sel(time=array([xx.year for xx in output_PFTs.time.values])<=maxyear)
@@ -191,13 +191,15 @@ def read_pftfile(filename,maxyear=None,decode_times=True):
         pft_mask=output_PFTs.pfts1d_itype_lunit == 1
         weights=output_PFTs.pfts1d_wtgcell[pft_mask]
         if len(weights) == len(pft_names_default[:17])*len(output_PFTs.lndgrid):
-            print('Reading from sim with default PFTs')
+            if verbose:
+                print('Reading from sim with default PFTs')
             vegdata_PFTs=xarray.Dataset(coords={'time':output_PFTs.time,'PFT':arange(len(pft_names_default[:17])),'ecotype':arange(len(output_PFTs.lndgrid))})
             newshape=(len(output_PFTs.lndgrid),len(pft_names_default[:17]))
             vegdata_PFTs.coords['PFTnames']=xarray.DataArray(pft_names_default[:17],dims=('PFT',)) 
             vegdata_PFTs.coords['PFTcolors']=xarray.DataArray(pft_colors_default[:17],dims=('PFT',))
         else:
-            print('Reading from sim with new PFTs')
+            if verbose:
+                print('Reading from sim with new PFTs')
             vegdata_PFTs=xarray.Dataset(coords={'time':output_PFTs.time,'PFT':arange(len(pft_names)),'ecotype':arange(len(output_PFTs.lndgrid))})
             newshape=(len(output_PFTs.lndgrid),len(pft_names))
             vegdata_PFTs.coords['PFTnames']=xarray.DataArray(pft_names,dims=('PFT',))
@@ -213,19 +215,22 @@ def read_pftfile(filename,maxyear=None,decode_times=True):
         for varname in output_PFTs.variables:
             var=output_PFTs[varname]
             if var.dims == ('time','pft'):
-                print(varname)
+                if verbose:
+                    print(varname)
                 vardata=var.values[:,pft_mask].reshape((len(var.time),newshape[0],newshape[1]))
                 vegdata_PFTs[var.name+'_unweighted']=(('time','ecotype','PFT'),vardata)
                 vegdata_PFTs[var.name+'_unweighted'].attrs['long_name']=var.long_name
                 vegdata_PFTs[var.name+'_unweighted'].attrs['units']=var.units
             elif var.dims == ('time','levdcmp','pft'):
-                print(varname+' (depth-resolved)')
+                if verbose:
+                    print(varname+' (depth-resolved)')
                 vardata=var.values[:,:,pft_mask].reshape((len(var.time),len(var.levdcmp),newshape[0],newshape[1]))
                 vegdata_PFTs[var.name+'_unweighted']=(('time','levdcmp','ecotype','PFT'),vardata)
                 vegdata_PFTs[var.name+'_unweighted'].attrs['long_name']=var.long_name
                 vegdata_PFTs[var.name+'_unweighted'].attrs['units']=var.units
             else:
-                print('NonPFT variable %s'%varname)
+                if verbose:
+                    print('NonPFT variable %s'%varname)
                 vegdata_PFTs[var.name]=var
         return vegdata_PFTs
 
@@ -320,7 +325,13 @@ ecotype_height_mapping={
     'Tussock tundra-Willow-birch tundra complex OR Alder savannah in tussock tundra':'ASV',
     'Willow-birch tundra':'WBT'
 }
-Breen_means=Breen_data.groupby('preliminary_plant_community_name').mean().rename(index=ecotype_height_mapping)  
+Breen_means=Breen_data.groupby('preliminary_plant_community_name')[[
+'mean_tree_layer_height',
+'mean_shrub_layer_height',
+'mean_tall_shrub_height',
+'mean_low_shrub_height',
+'mean_dwarf_shrub_height',
+'mean_forb_height']].mean().rename(index=ecotype_height_mapping)  
 obs_heights['tree_height_mean']=Breen_means['mean_tree_layer_height']
 obs_heights['shrub_height_mean']=Breen_means['mean_shrub_layer_height']
 obs_heights['tall_shrub_height_mean']=Breen_means['mean_tall_shrub_height']
@@ -328,7 +339,13 @@ obs_heights['low_shrub_height_mean']=Breen_means['mean_low_shrub_height']
 obs_heights['dwarf_shrub_height_mean']=Breen_means['mean_dwarf_shrub_height']
 obs_heights['forb_height_mean']=Breen_means['mean_forb_height']
 
-obs_heights['canopy_height_max']=Breen_data.groupby('preliminary_plant_community_name').max().rename(index=ecotype_height_mapping)['maximum_ canopy_height']
+obs_heights['canopy_height_max']=Breen_data.groupby('preliminary_plant_community_name')[[
+'mean_tree_layer_height',
+'mean_shrub_layer_height',
+'mean_tall_shrub_height',
+'mean_low_shrub_height',
+'mean_dwarf_shrub_height',
+'mean_forb_height','maximum_ canopy_height']].max().rename(index=ecotype_height_mapping)['maximum_ canopy_height']
 
 soildepth=pandas.read_excel('../obs_data/NGEEArctic_Kougarok_SoilDepth_starting2016_v1.xlsx',header=6)
 soilcores=pandas.read_excel('../obs_data/NGEE Arctic_Kougarok_2016_Soil cores_20170906.xlsx')
@@ -460,14 +477,22 @@ def plot_pair(var,vegdata_oldparams,vegdata_newparams,ecotype_num=1,**kwargs):
     
 def get_var_PFTs(varname,moddata,weight_area=True):
     if isinstance(varname,str):
-        dat=moddata[varname+'_unweighted'].copy()
+        if varname in moddata:
+            dat=moddata[varname].copy()
+        else:
+            dat=moddata[varname+'_unweighted'].copy()
     else:
         # Assuming we are adding multiple data fields together
-        dat=moddata[varname[0]+'_unweighted'].copy()
+        if varname[0] in moddata:
+            dat=moddata[varname[0]].copy()
+        else:
+            dat=moddata[varname[0]+'_unweighted'].copy()
         if len(varname)>1:
             for name in varname[1:]:
-                dat=dat+moddata[name+'_unweighted']
-
+                if name in moddata:
+                    dat=dat+moddata[name].copy()
+                else:
+                    dat=dat+moddata[name+'_unweighted'].copy()
 
     if weight_area:
         dat=dat*moddata.weights
